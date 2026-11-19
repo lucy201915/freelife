@@ -88,6 +88,62 @@ export const card: CSSProperties = {
   overflow: "hidden",
 };
 
+/** Resting shadow used by the homepage search field and floating cards. */
+export const shadow = "0 18px 40px rgba(31,61,43,.08)";
+
+export const panel: CSSProperties = {
+  background: C.white,
+  border: `1px solid ${C.line}`,
+  borderRadius: 22,
+  boxShadow: shadow,
+};
+
+/** Homepage hot-search chips. */
+export const chip: CSSProperties = {
+  border: `1px solid ${C.line}`,
+  background: "transparent",
+  color: C.ink2,
+  borderRadius: 999,
+  padding: "6px 14px",
+  fontSize: 13,
+};
+
+/** Outer pill around the homepage「台灣在地」badge. */
+export const capsule: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: 8,
+  background: C.white,
+  border: `1px solid ${C.line}`,
+  borderRadius: 999,
+  padding: "6px 14px 6px 8px",
+  fontSize: 13,
+  color: C.ink2,
+  maxWidth: "100%",
+};
+
+/** Inner gold label, same as「台灣在地」. */
+export const badge: CSSProperties = {
+  background: C.goldLight,
+  color: "#7A5F2E",
+  borderRadius: 999,
+  padding: "2px 10px",
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+  fontSize: 13,
+};
+
+export const blockTitle: CSSProperties = {
+  fontSize: 22,
+  fontWeight: 700,
+  color: C.ink,
+  margin: "0 0 16px",
+  lineHeight: 1.35,
+};
+
+export const pageWrap: CSSProperties = { ...wrap, padding: "80px 24px 88px" };
+
 export const CATEGORIES = [
   "行銷公關",
   "品牌設計",

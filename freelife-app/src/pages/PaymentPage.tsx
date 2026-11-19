@@ -4,8 +4,9 @@ import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
 import type { ContractDraft, ContractMilestone } from "../lib/contractDraft";
 import { confirmTestPayment, startHostedCheckout, type CheckoutSnapshot } from "../lib/payment";
 import { getSb, rpcMessage } from "../lib/supabase";
-import { C, btn, card, fmt, wrap } from "../lib/theme";
+import { C, btn, fmt, pageWrap, panel } from "../lib/theme";
 import { UUID_RE, firstOf } from "../lib/text";
+import { Badge } from "../components/ui";
 
 export type PaymentSummary = {
   contractId: string;
@@ -144,31 +145,32 @@ export default function PaymentPage() {
   return (
     <>
       <SiteHeader />
-      <div style={{ ...wrap, paddingTop: 36, paddingBottom: 88, maxWidth: 860 }}>
-        <div style={{ background: C.goldLight, color: "#7A5F2E", borderRadius: 18, padding: "14px 18px", fontWeight: 700, marginBottom: 18 }}>
-          測試模式・不會扣款
+      <div style={{ ...pageWrap, maxWidth: 1040 }}>
+        <div style={{ ...panel, padding: "16px 22px", marginBottom: 28, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <Badge>測試模式</Badge>
+          <span style={{ color: C.ink2, fontSize: 15 }}>不會扣款。此頁不會收集卡號，也不會向綠界或 TapPay 請款。</span>
         </div>
-        <h1 style={{ margin: "0 0 8px", fontSize: 34, color: C.ink }}>付款</h1>
-        <p style={{ color: C.ink2, marginTop: 0 }}>
+        <h1 className="fl-h2" style={{ margin: "0 0 12px", fontWeight: 800, color: C.ink }}>付款</h1>
+        <p style={{ color: C.ink2, margin: "0 0 28px", fontSize: 16, lineHeight: 1.8, maxWidth: 680 }}>
           此頁只顯示訂單摘要。信用卡號不會經過 Freeli。正式環境會導向綠界（ECPay）或 TapPay 的托管付款頁，並由伺服器驗證金流商回傳後才入帳。
         </p>
         {!profile && contractId !== "preview" ? (
-          <div style={{ ...card, padding: 28 }}>
+          <div style={{ ...panel, padding: 32 }}>
             <p style={{ color: C.ink2 }}>請先登入以查看你的合約付款。</p>
             <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => openAuth("login", "business")}>登入</button>
           </div>
         ) : null}
         {summary === undefined ? <p style={{ color: C.ink3 }}>載入訂單中…</p> : null}
         {summary === null ? (
-          <div style={{ ...card, padding: 28, color: C.ink2 }}>
+          <div style={{ ...panel, padding: 32, color: C.ink2 }}>
             {error || "這份結帳沒有帶入合約。請從對話中的合約重新進入。"}
           </div>
         ) : null}
         {summary ? (
-          <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(240px, 0.8fr)", gap: 20 }}>
-            <div style={{ ...card, padding: 24 }}>
+          <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) minmax(260px, 0.8fr)", gap: 24 }}>
+            <div style={{ ...panel, padding: 28 }}>
               <div style={{ fontSize: 13, color: C.forest2, fontWeight: 700, marginBottom: 8 }}>訂單摘要</div>
-              <h2 style={{ margin: "0 0 12px", fontSize: 24 }}>{summary.title}</h2>
+              <h2 className="fl-h2" style={{ margin: "0 0 16px", fontSize: 28, fontWeight: 700, color: C.ink }}>{summary.title}</h2>
               <Row label="委託方" value={summary.client} />
               <Row label="受託方" value={summary.talent} />
               <Row label="合約狀態" value={summary.agreed ? "雙方已同意" : "尚未雙方同意"} />
@@ -186,9 +188,9 @@ export default function PaymentPage() {
               ))}
               {!summary.milestones.length ? <p style={{ color: C.ink3 }}>這份合約沒有拆分里程碑。</p> : null}
             </div>
-            <div style={{ ...card, padding: 24 }}>
-              <div style={{ fontSize: 14, color: C.ink3 }}>本次付款</div>
-              <div style={{ fontSize: 36, fontWeight: 800, color: C.forest }}>{fmt(selectedAmount)}</div>
+            <div style={{ ...panel, padding: 28 }}>
+              <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600 }}>本次付款</div>
+              <div style={{ fontSize: 40, fontWeight: 800, color: C.forest, marginTop: 8 }}>{fmt(selectedAmount)}</div>
               <div style={{ fontSize: 13, color: C.ink3, margin: "8px 0 18px" }}>幣別 TWD・測試金流</div>
               {payment ? <p style={{ color: C.forest }}>付款狀態：{payment.status === "test_paid" ? "測試付款已記錄" : payment.status === "test_pending" ? "測試付款待完成" : payment.status}</p> : null}
               {notice ? <p style={{ color: C.ink2 }}>{notice}</p> : null}

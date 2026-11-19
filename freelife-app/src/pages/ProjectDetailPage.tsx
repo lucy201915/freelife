@@ -3,9 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
 import { ensureConversation } from "../lib/chat";
 import { getSb, rpcMessage } from "../lib/supabase";
-import { C, btn, card, wrap } from "../lib/theme";
+import { C, blockTitle, btn, capsule, pageWrap, panel, wrap } from "../lib/theme";
 import { asStringList, firstOf, formatWhen } from "../lib/text";
-import { Field } from "../components/ui";
+import { Badge, Chip, Field } from "../components/ui";
 import { budgetLabel, statusLabel, type ProjectListItem } from "./ProjectsPage";
 
 type ProjectDetail = ProjectListItem & {
@@ -198,17 +198,19 @@ export default function ProjectDetailPage() {
   return (
     <>
       <SiteHeader />
-      <div style={{ ...wrap, paddingTop: 36, paddingBottom: 88 }}>
-        <div style={{ fontSize: 13, color: C.ink3, marginBottom: 18 }}>
+      <div style={pageWrap}>
+        <div style={{ fontSize: 14, color: C.ink3, marginBottom: 28 }}>
           <span className="fl-link" onClick={() => navigate("/projects")}>找專案</span>
           <span> ／ {project.title}</span>
         </div>
-        <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.5fr) minmax(260px, 0.72fr)", gap: 28, alignItems: "start" }}>
+        <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.5fr) minmax(280px, 0.72fr)", gap: 36, alignItems: "start" }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.forest2, marginBottom: 8 }}>{statusLabel(project.status)}</div>
-            <h1 style={{ margin: "0 0 12px", fontSize: "clamp(28px, 4vw, 40px)", color: C.ink }}>{project.title}</h1>
-            <div style={{ color: C.ink2, marginBottom: 22 }}>委託方：{client}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 12, marginBottom: 28 }}>
+            <div style={{ ...capsule, marginBottom: 18 }}>
+              <Badge>{statusLabel(project.status)}</Badge>
+              <span>委託方・{client}</span>
+            </div>
+            <h1 className="fl-h2" style={{ margin: "0 0 28px", fontWeight: 800, color: C.ink }}>{project.title}</h1>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 16, marginBottom: 40 }}>
               <Fact label="預算" value={budgetLabel(project.budgetMin, project.budgetMax)} />
               <Fact label="時程" value={project.timeline || "尚未提供時程"} />
               <Fact label="狀態" value={statusLabel(project.status)} />
@@ -220,14 +222,14 @@ export default function ProjectDetailPage() {
             <Section title="需要的技能">
               {project.tags.length ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {project.tags.map((tag) => <span key={tag} style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 12px", color: C.ink2 }}>{tag}</span>)}
+                  {project.tags.map((tag) => <Chip key={tag}>{tag}</Chip>)}
                 </div>
               ) : <p style={{ color: C.ink3 }}>尚未列出需要的技能。</p>}
             </Section>
             {owner ? (
               <Section title="應徵">
                 {applications.length ? applications.map((row) => (
-                  <div key={row.id} style={{ ...card, padding: 16, marginBottom: 10 }}>
+                  <div key={row.id} style={{ ...panel, padding: 20, marginBottom: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                       <b>{row.username ? <span className="fl-link" onClick={() => navigate(`/talents/${row.username}`)}>{row.talentName}</span> : row.talentName}</b>
                       <span style={{ color: C.ink3 }}>{row.status === "pending" ? "待回覆" : row.status === "accepted" ? "已接受" : row.status === "declined" ? "已婉拒" : row.status}</span>
@@ -238,8 +240,8 @@ export default function ProjectDetailPage() {
               </Section>
             ) : null}
           </div>
-          <div style={{ ...card, padding: 22 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>參與這個專案</div>
+          <div className="fl-pkg-col" style={{ ...panel, padding: 28, position: "sticky", top: 24 }}>
+            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10, color: C.ink }}>參與這個專案</div>
             <p style={{ color: C.ink2, marginTop: 0 }}>應徵會送給發布者。聯絡會開啟你們的對話，並可在對話中產生合約草稿。</p>
             {owner ? <p style={{ color: C.forest }}>這是你發布的專案。</p> : null}
             {!owner && profile?.role === "talent" ? (
@@ -258,14 +260,14 @@ export default function ProjectDetailPage() {
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
-  return <section style={{ marginBottom: 28 }}><h2 style={{ fontSize: 20, color: C.ink }}>{title}</h2>{children}</section>;
+  return <section style={{ marginBottom: 44 }}><h2 style={blockTitle}>{title}</h2>{children}</section>;
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.line}`, borderRadius: 16, padding: "14px 16px" }}>
-      <div style={{ fontSize: 12, color: C.ink3 }}>{label}</div>
-      <div style={{ fontWeight: 700, color: C.ink, marginTop: 4 }}>{value}</div>
+    <div style={{ ...panel, padding: "18px 20px" }}>
+      <div style={{ fontSize: 13, color: C.ink3 }}>{label}</div>
+      <div style={{ fontWeight: 700, fontSize: 18, color: C.ink, marginTop: 6, lineHeight: 1.45 }}>{value}</div>
     </div>
   );
 }

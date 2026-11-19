@@ -4,9 +4,9 @@ import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
 import { ensureConversation } from "../lib/chat";
 import { findSampleTalent } from "../lib/samples";
 import { getSb, rpcMessage } from "../lib/supabase";
-import { C, btn, card, fmt, wrap } from "../lib/theme";
+import { C, blockTitle, btn, capsule, fmt, pageWrap, panel, wrap } from "../lib/theme";
 import { UUID_RE, asStringList, firstOf } from "../lib/text";
-import { Icon, Photo, Stars, initialsOf } from "../components/ui";
+import { Badge, Chip, Icon, Photo, Stars, initialsOf } from "../components/ui";
 
 type TalentView = {
   id: string;
@@ -226,49 +226,50 @@ export default function TalentProfilePage() {
   return (
     <>
       <SiteHeader />
-      <div style={{ ...wrap, paddingTop: 36, paddingBottom: 88 }}>
-        <div style={{ fontSize: 13, color: C.ink3, marginBottom: 18 }}>
+      <div style={pageWrap}>
+        <div style={{ fontSize: 14, color: C.ink3, marginBottom: 28 }}>
           <span className="fl-link" onClick={() => navigate("/talents")}>找專業</span>
           <span> ／ {talent.name}</span>
         </div>
         {talent.sample ? (
-          <div style={{ ...card, padding: "14px 18px", marginBottom: 18, background: C.goldLight, color: "#7A5F2E" }}>
-            這是首頁示意卡片，資料庫裡沒有對應檔案。技能與報價僅供瀏覽，不能開始對話。
+          <div style={{ ...capsule, marginBottom: 28, padding: "8px 16px 8px 8px" }}>
+            <Badge>示意檔案</Badge>
+            <span>資料庫裡沒有對應檔案。技能與報價僅供瀏覽，不能開始對話。</span>
           </div>
         ) : null}
-        <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(260px, 0.7fr)", gap: 28, alignItems: "start" }}>
+        <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.45fr) minmax(280px, 0.72fr)", gap: 36, alignItems: "start" }}>
           <div>
-            <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginBottom: 28 }}>
-              <div style={{ width: 168, flexShrink: 0 }}>
-                <Photo src={talent.img} alt={`${talent.name}的專業形象照`} height={168} radius={28} initials={initialsOf(talent.name)} />
-                {!talent.img ? <div style={{ fontSize: 12, color: C.ink3, textAlign: "center", marginTop: 8 }}>尚未上傳形象照</div> : null}
+            <div style={{ display: "flex", gap: 28, flexWrap: "wrap", marginBottom: 40, alignItems: "center" }}>
+              <div style={{ width: 220, flexShrink: 0 }}>
+                <Photo src={talent.img} alt={`${talent.name}的專業形象照`} height={220} radius={28} initials={initialsOf(talent.name)} />
+                {!talent.img ? <div style={{ fontSize: 13, color: C.ink3, textAlign: "center", marginTop: 10 }}>尚未上傳形象照</div> : null}
               </div>
-              <div style={{ flex: "1 1 240px" }}>
-                <h1 style={{ margin: 0, fontSize: 34, color: C.ink }}>{talent.name}</h1>
-                <div style={{ fontSize: 18, color: C.ink2, marginTop: 6 }}>{talent.headline || "尚未填寫職稱"}</div>
-                <div style={{ fontSize: 14, color: C.ink3, marginTop: 6 }}>{talent.location || "地點未提供"}{talent.languages ? `・${talent.languages}` : ""}</div>
-                <div style={{ marginTop: 12 }}>
-                  {talent.reviewCount > 0 ? <Stars value={talent.rating} reviews={talent.reviewCount} /> : <span style={{ color: C.ink3, fontSize: 14 }}>{talent.sample ? "示意評價，不是訂單評價" : "尚無評價"}</span>}
+              <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+                <div style={{ ...capsule, marginBottom: 16 }}>
+                  <Badge>{talent.years > 0 ? `認證 ${talent.years} 年` : "認證人才"}</Badge>
+                  {talent.reviewCount > 0 ? <Stars value={talent.rating} reviews={talent.reviewCount} /> : <span>{talent.sample ? "示意評價" : "尚無評價"}</span>}
                 </div>
-                {talent.years > 0 ? <div style={{ marginTop: 10, color: C.forest, fontWeight: 700 }}>認證 {talent.years} 年資歷</div> : <div style={{ marginTop: 10, color: C.forest, fontWeight: 700 }}>認證人才</div>}
+                <h1 className="fl-h2" style={{ margin: 0, fontWeight: 800, color: C.ink }}>{talent.name}</h1>
+                <div style={{ fontSize: 18, lineHeight: 1.7, color: C.ink2, marginTop: 10 }}>{talent.headline || "尚未填寫職稱"}</div>
+                <div style={{ fontSize: 15, color: C.ink3, marginTop: 6 }}>{talent.location || "地點未提供"}{talent.languages ? `・${talent.languages}` : ""}</div>
               </div>
             </div>
 
             <Section title="技能">
               {talent.skills.length ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {talent.skills.map((skill) => <span key={skill} style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 12px", color: C.ink2 }}>{skill}</span>)}
+                  {talent.skills.map((skill) => <Chip key={skill}>{skill}</Chip>)}
                 </div>
               ) : <Empty>尚未列出技能</Empty>}
             </Section>
             <Section title="自我介紹">
-              <p style={{ margin: 0, whiteSpace: "pre-wrap", color: C.ink2, lineHeight: 1.85 }}>{talent.bio || "尚未填寫自我介紹。"}</p>
+              <p style={{ margin: 0, whiteSpace: "pre-wrap", color: C.ink2, fontSize: 16, lineHeight: 1.85 }}>{talent.bio || "尚未填寫自我介紹。"}</p>
             </Section>
             <Section title="作品與過往合作">
               {works.length ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 14 }}>
                   {works.map((work) => (
-                    <div key={work.id} style={{ ...card, padding: 16 }}>
+                    <div key={work.id} className="fl-card" style={{ ...panel, padding: 22 }}>
                       <div style={{ fontWeight: 700, color: C.ink }}>{work.title}</div>
                       {work.summary ? <div style={{ color: C.ink2, marginTop: 6, fontSize: 14 }}>{work.summary}</div> : null}
                       {work.outcome ? <div style={{ color: C.forest, marginTop: 8, fontWeight: 700 }}>{work.outcome}</div> : null}
@@ -279,8 +280,8 @@ export default function TalentProfilePage() {
             </Section>
             <Section title="上架服務">
               {services.length ? services.map((service) => (
-                <Link key={service.id} to={`/services/${service.slug}`} style={{ display: "block", textDecoration: "none", color: "inherit", marginBottom: 8 }}>
-                  <div style={{ ...card, padding: 16 }}>
+                <Link key={service.id} to={`/services/${service.slug}`} style={{ display: "block", textDecoration: "none", color: "inherit", marginBottom: 12 }}>
+                  <div className="fl-card" style={{ ...panel, padding: 20 }}>
                     <div style={{ fontSize: 13, color: C.forest2 }}>{service.category}</div>
                     <div style={{ fontWeight: 700 }}>{service.title}</div>
                   </div>
@@ -289,7 +290,7 @@ export default function TalentProfilePage() {
             </Section>
             <Section title="評價">
               {reviews.length ? reviews.map((review) => (
-                <div key={review.id} style={{ ...card, padding: 16, marginBottom: 10 }}>
+                <div key={review.id} style={{ ...panel, padding: 20, marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <b>{review.reviewer_name || "企業雇主"}</b>
                     <Stars value={review.rating} />
@@ -300,7 +301,7 @@ export default function TalentProfilePage() {
             </Section>
           </div>
 
-          <div style={{ ...card, padding: 22, position: "sticky", top: 96 }}>
+          <div className="fl-pkg-col" style={{ ...panel, padding: 28, position: "sticky", top: 24 }}>
             <div style={{ fontSize: 13, color: C.ink3, marginBottom: 8 }}>合作報價</div>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <span style={{ color: C.ink2 }}>時薪</span>
@@ -322,7 +323,7 @@ export default function TalentProfilePage() {
       </div>
       {inviteOpen ? (
         <div onClick={() => setInviteOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(28,38,32,.45)", zIndex: 80, display: "grid", placeItems: "center", padding: 24 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ ...card, padding: 28, width: "min(480px, 100%)", background: C.white }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ ...panel, padding: 32, width: "min(520px, 100%)" }}>
             <h2 style={{ marginTop: 0 }}>邀請加入專案</h2>
             {requests === null ? <p style={{ color: C.ink3 }}>載入你的專案中…</p> : null}
             {requests && !requests.length ? (
@@ -346,15 +347,15 @@ export default function TalentProfilePage() {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section style={{ marginBottom: 28 }}>
-      <h2 style={{ fontSize: 20, marginBottom: 12, color: C.ink }}>{title}</h2>
+    <section style={{ marginBottom: 44 }}>
+      <h2 style={blockTitle}>{title}</h2>
       {children}
     </section>
   );
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <div style={{ color: C.ink3, background: C.ivory2, borderRadius: 16, padding: "16px 18px" }}>{children}</div>;
+  return <div style={{ ...panel, padding: "20px 22px", color: C.ink3, boxShadow: "none", background: C.ivory }}>{children}</div>;
 }
 
 function fromSample(sample: NonNullable<ReturnType<typeof findSampleTalent>>): TalentView {

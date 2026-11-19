@@ -4,8 +4,9 @@ import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
 import { ensureConversation } from "../lib/chat";
 import { generateContractDraft, type ContractDraft, type ContractMilestone } from "../lib/contractDraft";
 import { getSb, rpcMessage } from "../lib/supabase";
-import { C, btn, card, fmt, wrap } from "../lib/theme";
+import { C, btn, capsule, fmt, pageWrap, panel } from "../lib/theme";
 import { UUID_RE, asStringList, firstOf, formatWhen, missingSchema } from "../lib/text";
+import { Badge } from "../components/ui";
 import { summaryFromDraft } from "./PaymentPage";
 
 type Conv = {
@@ -313,27 +314,28 @@ export default function ConversationPage() {
   return (
     <>
       <SiteHeader />
-      <div style={{ ...wrap, paddingTop: 28, paddingBottom: 72 }}>
-        <div style={{ fontSize: 13, color: C.ink3, marginBottom: 14 }}>
+      <div style={pageWrap}>
+        <div style={{ fontSize: 14, color: C.ink3, marginBottom: 28 }}>
           <span className="fl-link" onClick={() => navigate(profile ? "/dashboard" : "/projects")}>{profile ? "工作台" : "找專案"}</span>
           <span> ／ 對話與合約</span>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 30, color: C.ink }}>{conv?.subject || request?.title || "對話"}</h1>
-            <div style={{ color: C.ink2, marginTop: 4 }}>{[clientCompany, clientName].filter(Boolean).join("・") || "委託方"}・{talentName || "受託方"}</div>
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ ...capsule, marginBottom: 16 }}>
+            <Badge>對話</Badge>
+            <span>{[clientCompany, clientName].filter(Boolean).join("・") || "委託方"}・{talentName || "受託方"}</span>
           </div>
+          <h1 className="fl-h2" style={{ margin: 0, fontWeight: 800, color: C.ink }}>{conv?.subject || request?.title || "對話"}</h1>
         </div>
-        {error ? <div style={{ ...card, padding: 16, marginBottom: 16, color: "#B4533C" }}>{error}</div> : null}
-        {opening ? <p style={{ color: C.ink3 }}>正在開啟對話…</p> : null}
+        {error ? <div style={{ ...panel, padding: 20, marginBottom: 20, color: "#B4533C" }}>{error}</div> : null}
+        {opening ? <p style={{ color: C.ink3, marginBottom: 16 }}>正在開啟對話…</p> : null}
         {!profile && isNew ? (
-          <div style={{ ...card, padding: 16, marginBottom: 16, background: C.sageMist }}>
-            你還沒有登入。可以先預覽合約草稿；登入後才能傳送訊息、儲存合約與表示同意。
-            <button className="fl-btn fl-primary" style={{ ...btn("primary"), marginLeft: 12 }} onClick={() => openAuth("login")}>登入</button>
+          <div style={{ ...panel, padding: "16px 20px", marginBottom: 22, background: C.sageMist, display: "flex", gap: 16, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+            <span style={{ color: C.ink2, fontSize: 15, lineHeight: 1.7 }}>你還沒有登入。可以先預覽合約草稿；登入後才能傳送訊息、儲存合約與表示同意。</span>
+            <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => openAuth("login")}>登入</button>
           </div>
         ) : null}
-        <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(280px, 0.85fr)", gap: 18, alignItems: "start" }}>
-          <div style={{ ...card, padding: 18, minHeight: 460, display: "flex", flexDirection: "column" }}>
+        <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(300px, 0.85fr)", gap: 24, alignItems: "start" }}>
+          <div style={{ ...panel, padding: 22, minHeight: 480, display: "flex", flexDirection: "column" }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
               {!conv && isNew ? <div style={{ color: C.ink3 }}>登入後，這裡會顯示你與對方的訊息。</div> : null}
               {conv && !msgs.length ? <div style={{ color: C.ink3 }}>這段對話還沒有訊息，先打個招呼吧。</div> : null}
@@ -352,9 +354,9 @@ export default function ConversationPage() {
               <button className="fl-btn fl-primary" disabled={!conv} style={btn("primary")} onClick={() => void send()}>送出</button>
             </div>
           </div>
-          <div style={{ ...card, padding: 18 }}>
-            <div style={{ fontSize: 13, letterSpacing: ".12em", color: C.forest2, fontWeight: 700 }}>合約</div>
-            <h2 style={{ margin: "8px 0 12px", fontSize: 22 }}>合作草稿</h2>
+          <div style={{ ...panel, padding: 26 }}>
+            <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600, marginBottom: 12 }}>合約</div>
+            <h2 className="fl-h2" style={{ margin: "0 0 16px", fontSize: 28, fontWeight: 700, color: C.ink }}>合作草稿</h2>
             {contracts.length > 1 ? <p style={{ color: C.ink3, fontSize: 13 }}>這段對話有 {contracts.length} 份草稿，以下是最新一份。</p> : null}
             {latest ? (
               <p style={{ color: C.ink2 }}>
@@ -384,7 +386,7 @@ export default function ConversationPage() {
 
 function ContractView({ draft, sourceLabel }: { draft: ContractDraft; sourceLabel: string }) {
   return (
-    <div style={{ background: C.ivory, borderRadius: 16, padding: 14 }}>
+    <div style={{ background: C.ivory, borderRadius: 18, padding: 18, border: `1px solid ${C.line}` }}>
       <div style={{ fontSize: 12, color: C.forest2, fontWeight: 700 }}>{sourceLabel}</div>
       <div style={{ fontWeight: 800, fontSize: 18, margin: "6px 0" }}>{draft.title}</div>
       <div style={{ color: C.forest, fontWeight: 800, fontSize: 22 }}>{fmt(draft.price)}</div>

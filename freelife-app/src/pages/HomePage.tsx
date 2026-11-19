@@ -1,6 +1,6 @@
-import { useState, useRef, useMemo, useEffect, type ChangeEvent, type KeyboardEvent, type CSSProperties } from "react";
+import { useState, useRef, useMemo, useEffect, type ChangeEvent, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { C, fmt, grid, wrap, type IconName } from "../lib/theme";
+import { C, badge, btn, capsule, card, chip, fmt, grid, shadow, wrap, type IconName } from "../lib/theme";
 import { listPublicTalents, listPublicServices } from "../lib/supabase";
 import { SAMPLE_TALENTS, type Talent, type TalentType } from "../lib/samples";
 import { useAuth } from "../lib/auth";
@@ -283,23 +283,6 @@ export default function HomePage() {
 
   const serviceTabs = ["全部", "行銷公關", "品牌設計", "B2B 業務開發", "網站與數位開發", "營運流程優化"];
 
-  const btn = (kind: "primary" | "ghost" | "light", big = false): CSSProperties => ({
-    border: kind === "ghost" ? `1.5px solid ${C.forest}` : "none",
-    background: kind === "primary" ? C.forest : kind === "light" ? C.ivory : "transparent",
-    color: kind === "primary" ? C.ivory : C.forest,
-    borderRadius: 999,
-    padding: big ? "15px 30px" : "10px 20px",
-    fontSize: big ? 16 : 15,
-    fontWeight: 600,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    minHeight: 44,
-    whiteSpace: "nowrap",
-  });
-
-  const card: CSSProperties = { background: C.white, border: `1px solid ${C.line}`, borderRadius: 22, overflow: "hidden" };
   const navItems: { label: string; on: () => void }[] = [
     { label: "找專業", on: () => { setMenu(false); navigate("/talents"); } },
     { label: "找專案", on: () => { setMenu(false); navigate("/projects"); } },
@@ -377,8 +360,8 @@ export default function HomePage() {
         <div className="fl-hero-scrim" aria-hidden="true" />
         <div className="fl-hero-grid fl-sec" style={{ ...wrap, paddingTop: 80, paddingBottom: 88 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 8, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 14px 6px 8px", fontSize: 13, color: C.ink2, marginBottom: 24, maxWidth: "100%" }}>
-              <span style={{ background: C.goldLight, color: "#7A5F2E", borderRadius: 999, padding: "2px 10px", fontWeight: 600, whiteSpace: "nowrap" }}>台灣在地</span>
+            <div style={{ ...capsule, marginBottom: 24 }}>
+              <span style={badge}>台灣在地</span>
               數位遊牧・資深自由工作者・重返職場媽媽
             </div>
             <h1 className="fl-h1" style={{ margin: 0, fontWeight: 800, color: C.ink }}>
@@ -388,7 +371,7 @@ export default function HomePage() {
               FREELIFE 匯聚經過認證的資深專業人才，以透明定價的標準化服務，陪伴台灣中小企業與新創彈性取得行銷、設計、業務與營運的專業力。
             </p>
 
-            <div className="fl-search" style={{ marginTop: 32, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, boxShadow: "0 18px 40px rgba(31,61,43,.08)" }}>
+            <div className="fl-search" style={{ marginTop: 32, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, boxShadow: shadow }}>
               <div style={{ flex: "1 1 200px", display: "flex", alignItems: "center", gap: 10, padding: "0 12px", minWidth: 0 }}>
                 <Icon name="search" color={C.ink3} />
                 <input
@@ -405,7 +388,7 @@ export default function HomePage() {
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 18 }}>
               <span style={{ fontSize: 14, color: C.ink3, marginRight: 4 }}>熱門搜尋：</span>
               {["品牌設計", "開發信", "新聞稿", "形象網站", "SOP"].map((s: string) => (
-                <button key={s} className="fl-chip" onClick={() => runSearch(s)} style={{ border: `1px solid ${C.line}`, background: "transparent", color: C.ink2, borderRadius: 999, padding: "6px 14px", fontSize: 13 }}>{s}</button>
+                <button key={s} className="fl-chip" onClick={() => runSearch(s)} style={chip}>{s}</button>
               ))}
             </div>
 

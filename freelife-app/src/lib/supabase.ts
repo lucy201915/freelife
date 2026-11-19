@@ -2,9 +2,18 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const isBrowser = typeof window !== "undefined";
 
 export const supabase: SupabaseClient | null =
-  url && anonKey ? createClient(url, anonKey) : null;
+  url && anonKey
+    ? createClient(url, anonKey, {
+        auth: {
+          persistSession: isBrowser,
+          autoRefreshToken: isBrowser,
+          detectSessionInUrl: isBrowser,
+        },
+      })
+    : null;
 
 export function getSb(): SupabaseClient | null {
   return supabase;
@@ -140,7 +149,7 @@ export async function listPublicTalents(): Promise<PublicTalent[]> {
       .filter((r): r is PublicTalent => !!r);
     if (mapped.length) return mapped;
   } else {
-    console.warn("[FREELIFE] talent_profiles embed failed, trying list_public_talents RPC", error);
+    console.warn("[Freeli] talent_profiles embed failed, trying list_public_talents RPC", error);
   }
   const rpc = await supabase.rpc("list_public_talents");
   if (rpc.error) throw error || rpc.error;

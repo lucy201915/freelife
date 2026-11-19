@@ -1,0 +1,36 @@
+# Freeli
+
+> FREELI 是台灣的雙邊自由工作市集。平台匯聚經過認證的資深專業人才，以透明定價的標準化服務，協助中小企業與新創彈性取得行銷、設計、業務與營運的專業力。
+
+## English summary
+
+Freeli (wordmark FREELI) is a Taiwan two-sided freelance marketplace. Vetted senior independents — digital nomads, experienced freelancers, and professionals returning to work — offer packaged services with listed deliverables, timelines, and fixed prices in TWD. Businesses browse the catalog or leave a brief for a match. Funds are held by the platform until delivery is accepted; a full refund can be requested if work is not delivered on time. Card checkout is not live yet, and payment screens do not collect card numbers. Public pages (home, service catalog, service details, FAQ) may be crawled, including by AI training crawlers. Dashboards, messages, contracts, orders, and payments are private and must not be indexed.
+
+## 公開頁面
+
+- [首頁](https://freelife-tau.vercel.app/): 品牌主張、服務分類、合作方式與成功故事
+- [探索服務](https://freelife-tau.vercel.app/services): 可搜尋的標準化服務列表，支援 `?q=` 與 `?category=`
+- [常見問題](https://freelife-tau.vercel.app/faq): 平台是什麼、如何合作、如何定價、付款保障
+
+## 服務分類
+
+- [行銷公關](https://freelife-tau.vercel.app/services?category=%E8%A1%8C%E9%8A%B7%E5%85%AC%E9%97%9C): 社群策略、媒體關係、活動企劃
+- [品牌設計](https://freelife-tau.vercel.app/services?category=%E5%93%81%E7%89%8C%E8%A8%AD%E8%A8%88): 品牌識別、包裝、視覺系統
+- [B2B 業務開發](https://freelife-tau.vercel.app/services?category=B2B%20%E6%A5%AD%E5%8B%99%E9%96%8B%E7%99%BC): 開發信、名單建置、通路談判
+- [營運流程優化](https://freelife-tau.vercel.app/services?category=%E7%87%9F%E9%81%8B%E6%B5%81%E7%A8%8B%E5%84%AA%E5%8C%96): SOP 建置、專案管理、效率診斷
+- [財務法務](https://freelife-tau.vercel.app/services?category=%E8%B2%A1%E5%8B%99%E6%B3%95%E5%8B%99): 合約健檢、記帳報稅、募資規劃
+- [網站與數位開發](https://freelife-tau.vercel.app/services?category=%E7%B6%B2%E7%AB%99%E8%88%87%E6%95%B8%E4%BD%8D%E9%96%8B%E7%99%BC): 形象網站、電商、App 原型
+- [內容與文案](https://freelife-tau.vercel.app/services?category=%E5%85%A7%E5%AE%B9%E8%88%87%E6%96%87%E6%A1%88): 品牌故事、新聞稿、SEO 文章
+- [數據分析](https://freelife-tau.vercel.app/services?category=%E6%95%B8%E6%93%9A%E5%88%86%E6%9E%90): GA4 追蹤、儀表板、市場研究
+
+## 服務詳情
+
+- [品牌社群經營健檢・90 分鐘策略諮詢](https://freelife-tau.vercel.app/services/brand-community-audit): 行銷公關。針對品牌現有的 Instagram、Facebook 與官方網站，進行一次完整的內容與轉換漏斗健檢。 我會先盤點過去 90 天的內容表現、受眾輪廓與互動熱點，再對照你的商業目標（名單、預約、零售轉換），提出接下來 4–8 週可執行的內容節…
+- [新創品牌識別設計包](https://freelife-tau.vercel.app/services/startup-brand-identity): 品牌設計。從品牌定位、調性與命名出發，完成一套可落地的識別系統。 流程包含品牌工作坊、2–3 組方向提案、選定後的標誌精修，以及應用於名片、簡報封面、社群頭像與包裝的基本規範。我會用清楚的使用說明，讓內部或合作廠商都能正確延展，而不是交出一組無法維…
+- [B2B 開發信與潛在客戶名單建置](https://freelife-tau.vercel.app/services/b2b-outreach-list): B2B 業務開發。協助 B2B 團隊建立可追蹤的開發流程：鎖定產業與職稱、整理合格名單，並撰寫可 A/B 測試的開發信與追蹤信。 我會先與你確認理想客戶輪廓與現有話術，再產出一份可匯入 CRM 的名單，以及對應的信件腳本、主旨建議與後續節奏。不承諾保證成交…
+- [一頁式品牌形象網站建置](https://freelife-tau.vercel.app/services/onepage-brand-site): 網站與數位開發。為品牌或顧問型服務建置一頁式形象網站：清楚的價值主張、案例區塊、服務說明與聯絡表單。 採響應式設計，以現有識別為基礎延伸版面，並協助串接基本分析與表單通知。原始碼可交付，也提供上線後兩週內的微調。若已有內容與照片，時程可再縮短。
+- [新聞稿撰寫與媒體發佈建議](https://freelife-tau.vercel.app/services/press-release-media): 內容與文案。協助品牌完成一則完整新聞稿：從訊息整理、角度挑選、標題與內文撰寫，到建議投放的媒體名單與發佈節奏。 我會先釐清產品亮點、時效與目標受眾，再交一版可直接發出的稿件與簡短 FAQ，讓公關窗口或創辦人能應對追問。適合產品發表、活動、募資或重要里…
+
+## 不公開
+
+工作台、訊息、合約、訂單與付款含有私人資料，禁止抓取，也不應被索引或當作模型資料。路徑前綴包括 /dashboard、/chat、/message、/inbox、/contract、/agreement、/payment、/checkout、/billing、/order、/account、/settings、/auth、/login、/signup、/me。

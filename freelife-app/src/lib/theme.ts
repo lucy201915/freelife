@@ -49,6 +49,7 @@ export const CSS = `
 .fl-tile:hover .fl-tile-ic { background: ${C.forest} !important; }
 .fl-h1 { font-size: clamp(34px, 5.6vw, 60px); line-height: 1.15; letter-spacing: .01em; }
 .fl-h2 { font-size: clamp(26px, 3.6vw, 38px); line-height: 1.25; }
+.fl-sr { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
 .fl-input:focus { outline: none; }
 .fl-search:focus-within { box-shadow: 0 0 0 3px ${C.sageLight}, 0 18px 40px rgba(31,61,43,.10) !important; }
 .fl-menu-btn { display: none !important; }

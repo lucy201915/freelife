@@ -1,0 +1,91 @@
+# Freeli（完整說明）
+
+> FREELI 匯聚經過認證的資深專業人才，以透明定價的標準化服務，陪伴台灣中小企業與新創。
+
+## English summary
+
+Freeli (wordmark FREELI) is a Taiwan two-sided freelance marketplace. Vetted senior independents — digital nomads, experienced freelancers, and professionals returning to work — offer packaged services with listed deliverables, timelines, and fixed prices in TWD. Businesses browse the catalog or leave a brief for a match. Funds are held by the platform until delivery is accepted; a full refund can be requested if work is not delivered on time. Card checkout is not live yet, and payment screens do not collect card numbers. Public pages (home, service catalog, service details, FAQ) may be crawled, including by AI training crawlers. Dashboards, messages, contracts, orders, and payments are private and must not be indexed.
+
+公開網站：https://freelife-tau.vercel.app/
+
+## 公開頁面
+
+- [首頁](https://freelife-tau.vercel.app/)
+- [探索服務](https://freelife-tau.vercel.app/services)
+- [常見問題](https://freelife-tau.vercel.app/faq)
+
+## 為什麼選擇 FREELI
+
+- 嚴選認證人才：人才需經過年資、作品與推薦審核，取得認證才能上架。
+- 透明定價：服務包明列交付物、天數與固定價格，預算可以一次看懂。
+- 安心付款保障：款項由平台代管，驗收完成才撥款；未如期交付可申請全額退款。
+- 彈性合作模式：單次諮詢、專案包到階段性陪跑，依需求組合。
+
+## 企業如何合作
+
+1. 搜尋服務或留下需求：直接瀏覽標準化服務包，或用簡短描述留下需求，由顧問協助配對。
+2. 比較人才與透明報價：年資認證、交付物、天數與價格一目了然，評價來自真實訂單。
+3. 安心付款、啟動合作：款項由平台保管，雙方在專案工作區確認時程與交付內容。
+4. 驗收交付、完成撥款：確認成果後才撥款給人才，並留下評價。
+
+## 人才如何合作
+
+1. 建立專業檔案：整理經歷與作品，呈現可被企業理解的實戰亮點。
+2. 通過資歷認證：平台審核年資與作品，取得認證後才能上架。
+3. 上架標準化服務包：自訂交付物、天數與固定報價，並決定每週可接案時數。
+4. 接案交付、準時收款：可遠端合作。驗收完成後，款項依平台流程撥付。
+
+## 服務分類
+
+- 行銷公關：社群策略、媒體關係、活動企劃
+- 品牌設計：品牌識別、包裝、視覺系統
+- B2B 業務開發：開發信、名單建置、通路談判
+- 營運流程優化：SOP 建置、專案管理、效率診斷
+- 財務法務：合約健檢、記帳報稅、募資規劃
+- 網站與數位開發：形象網站、電商、App 原型
+- 內容與文案：品牌故事、新聞稿、SEO 文章
+- 數據分析：GA4 追蹤、儀表板、市場研究
+
+## 服務詳情
+
+- [品牌社群經營健檢・90 分鐘策略諮詢](https://freelife-tau.vercel.app/services/brand-community-audit): 行銷公關。針對品牌現有的 Instagram、Facebook 與官方網站，進行一次完整的內容與轉換漏斗健檢。 我會先盤點過去 90 天的內容表現、受眾輪廓與互動熱點，再對照你的商業目標（名單、預約、零售轉換），提出接下來 4–8 週可執行的內容節奏、素材規格與投放建議。 適合剛成立的品牌、社群經營停滯，或即將上線新產品、需要重整資訊架構的團隊。交付以書面報告與線上會議為主，會議可依需求改為中文或英文。
+- [新創品牌識別設計包](https://freelife-tau.vercel.app/services/startup-brand-identity): 品牌設計。從品牌定位、調性與命名出發，完成一套可落地的識別系統。 流程包含品牌工作坊、2–3 組方向提案、選定後的標誌精修，以及應用於名片、簡報封面、社群頭像與包裝的基本規範。我會用清楚的使用說明，讓內部或合作廠商都能正確延展，而不是交出一組無法維護的視覺檔。 適合準備對外募資、官網改版，或從個人工作室升級為品牌形象的團隊。
+- [B2B 開發信與潛在客戶名單建置](https://freelife-tau.vercel.app/services/b2b-outreach-list): B2B 業務開發。協助 B2B 團隊建立可追蹤的開發流程：鎖定產業與職稱、整理合格名單，並撰寫可 A/B 測試的開發信與追蹤信。 我會先與你確認理想客戶輪廓與現有話術，再產出一份可匯入 CRM 的名單，以及對應的信件腳本、主旨建議與後續節奏。不承諾保證成交，但會把流程與指標講清楚，方便業務團隊接手。
+- [一頁式品牌形象網站建置](https://freelife-tau.vercel.app/services/onepage-brand-site): 網站與數位開發。為品牌或顧問型服務建置一頁式形象網站：清楚的價值主張、案例區塊、服務說明與聯絡表單。 採響應式設計，以現有識別為基礎延伸版面，並協助串接基本分析與表單通知。原始碼可交付，也提供上線後兩週內的微調。若已有內容與照片，時程可再縮短。
+- [新聞稿撰寫與媒體發佈建議](https://freelife-tau.vercel.app/services/press-release-media): 內容與文案。協助品牌完成一則完整新聞稿：從訊息整理、角度挑選、標題與內文撰寫，到建議投放的媒體名單與發佈節奏。 我會先釐清產品亮點、時效與目標受眾，再交一版可直接發出的稿件與簡短 FAQ，讓公關窗口或創辦人能應對追問。適合產品發表、活動、募資或重要里程碑。
+
+## 常見問題
+
+### Freeli 是什麼？
+
+Freeli（字標 FREELI）是台灣的雙邊自由工作市集。平台匯聚經過認證的資深專業人才，包含數位遊牧、資深自由工作者與重返職場的專業人士，以透明定價的標準化服務，協助中小企業與新創取得行銷、設計、業務與營運等專業力。
+
+### 企業如何開始合作？
+
+可以先在「探索服務」瀏覽標準化服務，依類別或關鍵字篩選；也可以留下需求，由顧問協助配對。每個方案會列出交付內容、工作天數與固定價格。確認合作後，款項由平台代管，驗收完成才撥款給人才。
+
+### 專業人才如何加入？
+
+建立專業檔案並通過年資與作品審核，取得認證後即可上架服務包。人才自行決定交付物、天數、固定報價與每週可接案時數，並可遠端完成合作。
+
+### 價格需要另外議價嗎？
+
+服務頁以 Basic、Standard、Premium 等方案標示固定價格、交付天數、修訂次數與交付項目。下單時價格由系統依所選方案寫入，頁面上看到的就是方案價格。
+
+### 付款如何保障？目前可以刷卡嗎？
+
+合作款項由平台代管，確認成果後才撥款；未如期交付可申請全額退款。線上金流尚未開放，這個階段的付款畫面不會收集信用卡資料，也不會向你收費。
+
+### 有哪些服務類型？
+
+目前的服務分類包括行銷公關、品牌設計、B2B 業務開發、營運流程優化、財務法務、網站與數位開發、內容與文案、數據分析。實際可預約的方案以服務列表為準。
+
+### 哪些內容不會提供給搜尋引擎？
+
+工作台、訊息、合約、訂單與付款等登入後頁面只供當事人使用。這些網址設為 noindex，並在 robots.txt 禁止抓取，不會放進網站地圖。
+
+## 給爬蟲與模型的使用範圍
+
+可以抓取並使用首頁、服務列表、服務詳情與常見問題的公開內容。不要抓取或收錄登入後的工作台、對話、合約、訂單、付款與個人聯絡資料。這些路徑已在 robots.txt 禁止，頁面也標示 noindex。
+
+網站地圖：https://freelife-tau.vercel.app/sitemap.xml

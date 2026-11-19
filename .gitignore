@@ -1,0 +1,6 @@
+node_modules/
+freelife-app/node_modules/
+freelife-app/dist-ssr/
+freelife-app/.env
+freelife-app/.env.local
+freelife-app/.env.*.local

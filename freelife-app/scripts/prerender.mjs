@@ -25,6 +25,8 @@ const {
   buildLlmsFullTxt,
   isPrivatePath,
   SITE_ORIGIN,
+  GTM_CONTAINER_ID,
+  GA_MEASUREMENT_ID,
 } = mod;
 
 const AI_BOTS = ["GPTBot", "Google-Extended", "ClaudeBot", "CCBot", "PerplexityBot"];
@@ -218,6 +220,15 @@ for (const page of written) {
   assert(website.name === "Freeli" && website.alternateName === "FREELI", `${page.path} WebSite name`);
   const org = nodes.find((node) => node["@type"] === "Organization");
   assert(org.name === "Freeli" && org.url, `${page.path} Organization name`);
+  const head = page.html.slice(0, page.html.indexOf("</head>"));
+  assert(head.includes(GTM_CONTAINER_ID), `${page.path} head is missing GTM`);
+  assert(head.includes(`gtag/js?id=${GA_MEASUREMENT_ID}`), `${page.path} head is missing GA4`);
+  assert(head.includes("send_page_view: false") || head.includes("send_page_view:!1"), `${page.path} GA4 still sends an automatic page view`);
+  assert(head.indexOf(GTM_CONTAINER_ID) < head.indexOf("<meta charset"), `${page.path} GTM is not the first thing in head`);
+  const bodyStart = page.html.indexOf("<body>");
+  const rootAt = page.html.indexOf('<div id="root"');
+  const noscript = page.html.slice(bodyStart, rootAt);
+  assert(noscript.includes(`ns.html?id=${GTM_CONTAINER_ID}`), `${page.path} is missing the GTM noscript iframe`);
 }
 
 const home = written.find((page) => page.path === "/");

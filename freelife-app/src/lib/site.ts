@@ -2,6 +2,12 @@
 
 export const SITE_ORIGIN = "https://freelife-tau.vercel.app";
 
+/** Google Tag Manager container. Must match the snippet in index.html. */
+export const GTM_CONTAINER_ID = "GTM-T9JVGVNS";
+
+/** GA4 measurement ID. Page views are sent manually because this is an SPA. */
+export const GA_MEASUREMENT_ID = "G-LLK3HD2FQ8";
+
 /** Prose brand name. */
 export const BRAND_NAME = "Freeli";
 

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { C, btn, wrap, FONT, CSS } from "./theme";
 import { getSb, startPayment, type FlProfile } from "./supabase";
 import { Leaf, Icon } from "../components/ui";
+import { trackEvent } from "./analytics";
 
 type AuthMode = "login" | "signup" | null;
 
@@ -246,7 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               <button className="fl-btn fl-primary" disabled={authBusy} style={{ ...btn("primary", true), width: "100%" }} onClick={handleAuthSubmit}>{authBusy ? "請稍候…" : (authOpen === "login" ? "登入" : "建立帳號")}</button>
               <div style={{ marginTop: 16, fontSize: 14, textAlign: "center" }}>
                 {authOpen === "login" ? (
-                  <span className="fl-link" style={{ color: C.forest2, fontWeight: 600 }} onClick={() => { setAuthOpen("signup"); setAuthError(""); setAuthInfo(""); }}>還沒有帳號？免費註冊</span>
+                  <span className="fl-link" style={{ color: C.forest2, fontWeight: 600 }} onClick={() => { trackEvent("sign_up_click"); setAuthOpen("signup"); setAuthError(""); setAuthInfo(""); }}>還沒有帳號？免費註冊</span>
                 ) : (
                   <span className="fl-link" style={{ color: C.forest2, fontWeight: 600 }} onClick={() => { setAuthOpen("login"); setAuthError(""); setAuthInfo(""); }}>已有帳號？改為登入</span>
                 )}
@@ -361,7 +362,7 @@ export function SiteHeader({ extraNav }: { extraNav?: { label: string; on: () =>
           ) : (
             <>
               <button className="fl-btn fl-ghost fl-hide-sm" style={{ ...btn("ghost"), border: "none" }} onClick={() => openAuth("login")}>登入</button>
-              <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => openAuth("signup", "business")}>免費註冊</button>
+              <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => { trackEvent("sign_up_click"); openAuth("signup", "business"); }}>免費註冊</button>
             </>
           )}
           <button className="fl-btn fl-ghost fl-menu-btn" aria-label="選單" style={{ ...btn("ghost"), padding: 10, border: `1px solid ${C.line}` }} onClick={() => setMenu(!menu)}><Icon name="menu" /></button>

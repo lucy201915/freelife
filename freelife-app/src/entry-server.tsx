@@ -16,4 +16,4 @@ export function render(url: string, bootstrap: BootstrapData = {}) {
 export type { BootstrapData };
 export { getPublicServicePage, listPublicServices } from "./lib/supabase";
 export { buildLlmsFullTxt, buildLlmsTxt, buildRobotsTxt, buildSitemapXml } from "./lib/seo-files";
-export { PRIVATE_PATH_PREFIXES, SITE_ORIGIN, isPrivatePath } from "./lib/site";
+export { GA_MEASUREMENT_ID, GTM_CONTAINER_ID, PRIVATE_PATH_PREFIXES, SITE_ORIGIN, isPrivatePath } from "./lib/site";

@@ -556,11 +556,8 @@ function OrdersPanel({ profile }: { profile: FlProfile }) {
 }
 
 function MessagesPanel({ profile }: { profile: FlProfile }) {
-  const { sb, setNotice } = useAuth();
-  const [convs, setConvs] = useState<Array<{ id: string; subject: string; business_id: string; talent_id: string; updated_at: string }> | null>(null);
-  const [active, setActive] = useState<string | null>(null);
-  const [msgs, setMsgs] = useState<Array<{ id: string; body: string; sender_id?: string; created_at: string }>>([]);
-  const [body, setBody] = useState("");
+  const { sb } = useAuth();
+  const [convs, setConvs] = useState<Array<{ id: string; subject: string; updated_at: string }> | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -569,7 +566,7 @@ function MessagesPanel({ profile }: { profile: FlProfile }) {
     (async () => {
       const { data, error: e } = await sb
         .from("conversations")
-        .select("id, subject, business_id, talent_id, updated_at")
+        .select("id, subject, updated_at")
         .or(`business_id.eq.${profile.id},talent_id.eq.${profile.id}`)
         .order("updated_at", { ascending: false });
       if (cancelled) return;
@@ -579,58 +576,18 @@ function MessagesPanel({ profile }: { profile: FlProfile }) {
     return () => { cancelled = true; };
   }, [sb, profile.id]);
 
-  useEffect(() => {
-    if (!sb || !active) return;
-    let cancelled = false;
-    (async () => {
-      const { data, error: e } = await sb.from("messages").select("id, body, sender_id, created_at").eq("conversation_id", active).order("created_at");
-      if (cancelled) return;
-      if (e) setError(e.message);
-      else setMsgs((data || []) as typeof msgs);
-    })();
-    return () => { cancelled = true; };
-  }, [sb, active]);
-
-  const send = async () => {
-    if (!sb || !active) return;
-    const text = body.trim();
-    if (text.length < 1 || text.length > 2000) { setNotice("訊息請介於 1 到 2000 字"); return; }
-    const { error: e } = await sb.from("messages").insert({ conversation_id: active, body: text, sender_id: profile.id });
-    if (e) { setNotice(e.message); return; }
-    setBody("");
-    const { data } = await sb.from("messages").select("id, body, sender_id, created_at").eq("conversation_id", active).order("created_at");
-    setMsgs((data || []) as typeof msgs);
-  };
-
   if (error) return <p style={{ color: "#B4533C" }}>{error}</p>;
   if (convs === null) return <p style={{ color: C.ink3 }}>載入訊息中…</p>;
-  if (!convs.length) return <div style={{ ...card, padding: 28, color: C.ink2 }}>目前沒有對話。企業雇主可從服務頁點「聯絡人才」開始。</div>;
+  if (!convs.length) return <div style={{ ...card, padding: 28, color: C.ink2 }}>目前沒有對話。可從人才檔案或專案頁開始。</div>;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(200px, 280px) 1fr", gap: 16 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {convs.map((c) => (
-          <button key={c.id} onClick={() => setActive(c.id)} style={{ ...card, padding: 14, textAlign: "left", border: `1px solid ${active === c.id ? C.forest : C.line}`, background: active === c.id ? C.sageMist : C.white, cursor: "pointer" }}>
-            <div style={{ fontWeight: 700 }}>{c.subject}</div>
-            <div style={{ fontSize: 12, color: C.ink3 }}>{new Date(c.updated_at).toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}</div>
-          </button>
-        ))}
-      </div>
-      <div style={{ ...card, padding: 18, minHeight: 320, display: "flex", flexDirection: "column" }}>
-        {!active ? <div style={{ color: C.ink3 }}>請選擇左側對話</div> : (
-          <>
-            <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-              {msgs.map((m) => (
-                <div key={m.id} style={{ background: C.ivory, borderRadius: 12, padding: "10px 12px", color: C.ink2 }}>{m.body}</div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input className="fl-input" value={body} onChange={(e) => setBody(e.target.value)} placeholder="輸入訊息" style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 14px", fontSize: 15 }} />
-              <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => void send()}>送出</button>
-            </div>
-          </>
-        )}
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {convs.map((c) => (
+        <Link key={c.id} to={`/messages/${c.id}`} style={{ ...card, padding: 16, textDecoration: "none", color: "inherit" }}>
+          <div style={{ fontWeight: 700 }}>{c.subject}</div>
+          <div style={{ fontSize: 12, color: C.ink3 }}>{new Date(c.updated_at).toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })}・開啟對話與合約</div>
+        </Link>
+      ))}
     </div>
   );
 }
@@ -668,13 +625,13 @@ function ReviewsPanel({ profile }: { profile: FlProfile }) {
 function FavoritesPanel({ profile }: { profile: FlProfile }) {
   const { sb } = useAuth();
   const [services, setServices] = useState<Array<{ service_id: string; services?: { title: string; slug: string } | null }> | null>(null);
-  const [talents, setTalents] = useState<Array<{ talent_id: string; profiles?: { name: string } | null }> | null>(null);
+  const [talents, setTalents] = useState<Array<{ talent_id: string; profiles?: { name: string; username?: string } | null }> | null>(null);
   useEffect(() => {
     if (!sb) return;
     (async () => {
       const [sf, tf] = await Promise.all([
         sb.from("service_favorites").select("service_id, services(title, slug)").eq("user_id", profile.id),
-        sb.from("favorites").select("talent_id, profiles!favorites_talent_id_fkey(name)").eq("user_id", profile.id),
+        sb.from("favorites").select("talent_id, profiles!favorites_talent_id_fkey(name, username)").eq("user_id", profile.id),
       ]);
       setServices((sf.data || []) as unknown as NonNullable<typeof services>);
       setTalents((tf.data || []) as unknown as NonNullable<typeof talents>);
@@ -692,7 +649,9 @@ function FavoritesPanel({ profile }: { profile: FlProfile }) {
       ))}
       <h3 style={{ fontSize: 18, margin: "20px 0 10px" }}>收藏的人才</h3>
       {talents.map((t) => (
-        <div key={t.talent_id} style={{ ...card, padding: 16, marginBottom: 8 }}>{t.profiles?.name || t.talent_id}</div>
+        <div key={t.talent_id} style={{ ...card, padding: 16, marginBottom: 8 }}>
+          <Link to={`/talents/${t.profiles?.username || t.talent_id}`}>{t.profiles?.name || "人才檔案"}</Link>
+        </div>
       ))}
     </div>
   );

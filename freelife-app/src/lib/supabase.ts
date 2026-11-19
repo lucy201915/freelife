@@ -203,6 +203,16 @@ export function rpcMessage(err: unknown): string {
     cannot_contact_self: "不能聯絡自己",
     invalid_invite_kind: "邀請類型不正確",
     invalid_rating: "評分需為 1 到 5 星",
+    not_a_party: "你不是這份合作的當事人",
+    conversation_roles_invalid: "對話需要一方為企業雇主、一方為專業人才",
+    contract_not_found: "找不到這份合約",
+    contract_not_agreed: "雙方都同意合約後才能建立付款",
+    only_client_can_pay: "僅限委託方（企業雇主）付款",
+    invalid_milestone: "找不到這個付款里程碑",
+    payment_not_found: "找不到這筆付款",
+    payment_not_confirmable: "這筆付款目前不能完成",
+    payment_confirmation_requires_provider: "正式金流必須由伺服器驗證金流商回傳後才能入帳",
+    contract_parties_locked: "合約當事人不能更改",
   };
   for (const [k, v] of Object.entries(map)) {
     if (msg.includes(k)) return v;

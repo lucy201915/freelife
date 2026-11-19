@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useEffect, type ChangeEvent, type KeyboardEv
 import { useNavigate } from "react-router-dom";
 import { C, fmt, grid, wrap, type IconName } from "../lib/theme";
 import { listPublicTalents, listPublicServices } from "../lib/supabase";
+import { SAMPLE_TALENTS, type Talent, type TalentType } from "../lib/samples";
 import { useAuth } from "../lib/auth";
 import { Icon, Leaf, Photo, Stars, initialsOf, SecHead, Pill } from "../components/ui";
 
@@ -20,6 +21,7 @@ type LiveTalentRow = {
   img: string;
   city: string;
   id?: string;
+  username?: string;
 };
 
 function mapLiveTalent(row: any, _index: number): LiveTalentRow {
@@ -27,6 +29,7 @@ function mapLiveTalent(row: any, _index: number): LiveTalentRow {
   const from = Number(row.project_min) > 0 ? Number(row.project_min) : (Number(row.hourly_min) || 0);
   return {
     id: String(row.id || ""),
+    username: String(row.username || ""),
     name: String(row.name || "專業人才"),
     title: String(row.headline || "專業顧問"),
     years: 0,
@@ -66,15 +69,6 @@ const CATS: Cat[] = [
   { name: "網站與數位開發", desc: "形象網站、電商、App 原型", count: "340+ 位人才", icon: "code" },
   { name: "內容與文案", desc: "品牌故事、新聞稿、SEO 文章", count: "470+ 位人才", icon: "doc" },
   { name: "數據分析", desc: "GA4 追蹤、儀表板、市場研究", count: "190+ 位人才", icon: "chart" },
-];
-
-type TalentType = "數位遊牧" | "重返職場媽媽" | "資深自由工作者";
-type Talent = { name: string; title: string; years: number; type: TalentType | "專業人才"; skills: string[]; rating: number; reviews: number; from: number; img: string; city: string; id?: string };
-const TALENTS: Talent[] = [
-  { name: "陳思妤", title: "品牌行銷與公關顧問", years: 12, type: "重返職場媽媽", skills: ["行銷公關", "社群策略"], rating: 4.9, reviews: 128, from: 3600, img: "asset:t1.jpg", city: "台北" },
-  { name: "林哲宇", title: "全端工程師・網站架構", years: 8, type: "數位遊牧", skills: ["網站開發", "電商串接"], rating: 4.9, reviews: 86, from: 8000, img: "asset:t2.jpg", city: "清邁／台中" },
-  { name: "王雅琳", title: "營運管理與流程顧問", years: 15, type: "資深自由工作者", skills: ["營運流程", "專案管理"], rating: 4.8, reviews: 104, from: 5000, img: "asset:t3.jpg", city: "新竹" },
-  { name: "張凱婷", title: "品牌視覺設計師", years: 10, type: "數位遊牧", skills: ["品牌識別", "包裝設計"], rating: 5.0, reviews: 67, from: 6500, img: "asset:t4.jpg", city: "峇里島／台北" },
 ];
 
 type Service = { id: number; title: string; cat: string; seller: string; badge: string; items: string[]; days: number; price: number; rating: number; reviews: number; popular?: boolean };
@@ -149,7 +143,7 @@ export default function HomePage() {
     return SERVICES.filter((s: Service) => (cat === "全部" || s.cat === cat) && (!t || (s.title + s.cat + s.seller + s.items.join("")).toLowerCase().includes(t)));
   }, [applied, cat]);
 
-  const talentSource: Talent[] = liveTalents && liveTalents.length ? liveTalents : TALENTS;
+  const talentSource: Talent[] = liveTalents && liveTalents.length ? liveTalents : SAMPLE_TALENTS;
   const talents = talentSource.filter((t: Talent) => ttype === "全部" || t.type === ttype);
 
   useEffect(() => {
@@ -253,8 +247,9 @@ export default function HomePage() {
 
   const card: CSSProperties = { background: C.white, border: `1px solid ${C.line}`, borderRadius: 22, overflow: "hidden" };
   const navItems: { label: string; on: () => void }[] = [
+    { label: "找專業", on: () => { setMenu(false); navigate("/talents"); } },
+    { label: "找專案", on: () => { setMenu(false); navigate("/projects"); } },
     { label: "探索服務", on: () => { setMenu(false); navigate("/services"); } },
-    { label: "尋找人才", on: () => go(talentRef) },
     { label: "成為人才", on: () => go(joinRef) },
     ...(profile ? [{ label: "工作台", on: () => { setMenu(false); navigate("/dashboard"); } }] : []),
   ];
@@ -435,12 +430,13 @@ export default function HomePage() {
           <div style={grid(250, 22)}>
             {talents.map((t: Talent) => {
               const isSaved = saved.includes(t.name);
+              const href = t.username || t.slug || t.id;
               return (
-                <div key={t.name} className="fl-card" style={card}>
+                <div key={t.username || t.slug || t.name} className="fl-card" style={{ ...card, cursor: href ? "pointer" : undefined }} onClick={() => href && navigate(`/talents/${href}`)}>
                   <div style={{ position: "relative", padding: 10 }}>
                     <Photo src={t.img} alt={`${t.name}的專業形象照`} height={260} radius={16} initials={initialsOf(t.name)} />
                     <span style={{ position: "absolute", top: 22, left: 22, background: "rgba(255,253,249,.94)", color: C.forest, borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>{t.type}</span>
-                    <button className="fl-btn" aria-label="收藏" onClick={() => toggleFavorite(t)} style={{ position: "absolute", top: 18, right: 18, width: 38, height: 38, borderRadius: 999, border: "none", background: "rgba(255,253,249,.94)", color: isSaved ? "#B4533C" : C.ink3, fontSize: 18, display: "grid", placeItems: "center" }}>{isSaved ? "♥" : "♡"}</button>
+                    <button className="fl-btn" aria-label="收藏" onClick={(e) => { e.stopPropagation(); void toggleFavorite(t); }} style={{ position: "absolute", top: 18, right: 18, width: 38, height: 38, borderRadius: 999, border: "none", background: "rgba(255,253,249,.94)", color: isSaved ? "#B4533C" : C.ink3, fontSize: 18, display: "grid", placeItems: "center" }}>{isSaved ? "♥" : "♡"}</button>
                   </div>
                   <div style={{ padding: "8px 22px 22px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -462,6 +458,9 @@ export default function HomePage() {
                 </div>
               );
             })}
+          </div>
+          <div style={{ marginTop: 28, textAlign: "center" }}>
+            <button className="fl-btn fl-ghost" style={btn("ghost")} onClick={() => navigate("/talents")}>看全部專業人才</button>
           </div>
         </div>
       </div>

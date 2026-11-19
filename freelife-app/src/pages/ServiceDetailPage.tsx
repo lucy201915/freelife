@@ -169,16 +169,19 @@ export default function ServiceDetailPage() {
     setBusy(true);
     setFormError("");
     try {
-      const { error } = await sb.rpc("start_service_contact", {
+      const { data, error } = await sb.rpc("start_service_contact", {
         p_service_id: page.service.id,
         p_kind: "quote",
         p_note: note.trim() || `想進一步了解「${page.service.title}」`,
       });
       if (error) throw error;
+      const conversationId = data && typeof data === "object" && "conversation_id" in data
+        ? String((data as { conversation_id?: string }).conversation_id || "")
+        : "";
       setContactOpen(false);
       setNote("");
-      setNotice("已送出邀請，可在工作台查看訊息");
-      navigate("/dashboard");
+      setNotice("已開啟對話");
+      navigate(conversationId ? `/messages/${conversationId}` : "/dashboard");
     } catch (err) {
       setFormError(rpcMessage(err));
     } finally {
@@ -262,7 +265,7 @@ export default function ServiceDetailPage() {
                 {initialsOf(page.talent.name)}
               </div>
               <div>
-                <div style={{ fontWeight: 700, color: C.ink }}>{page.talent.name}</div>
+                <div style={{ fontWeight: 700, color: C.ink }}><Link to={`/talents/${page.talent.username || page.talent.id}`} style={{ color: "inherit", textDecoration: "none" }}>{page.talent.name}</Link></div>
                 <div style={{ fontSize: 14, color: C.ink2 }}>{page.talent.headline}{page.talent.location ? `・${page.talent.location}` : ""}</div>
               </div>
               {page.stats.review_count > 0 ? <Stars value={page.stats.avg_rating} reviews={page.stats.review_count} /> : <span style={{ fontSize: 13, color: C.ink3 }}>尚無評價</span>}

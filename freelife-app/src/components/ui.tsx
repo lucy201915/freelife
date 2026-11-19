@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { C, type IconName } from "../lib/theme";
+import { C, badge, chip, type IconName } from "../lib/theme";
 
 export function Image({
   src,
@@ -116,6 +116,14 @@ export function SecHead({ eyebrow, title, sub, right }: { eyebrow: string; title
       {right}
     </div>
   );
+}
+
+export function Chip({ children }: { children: ReactNode }) {
+  return <span style={chip}>{children}</span>;
+}
+
+export function Badge({ children }: { children: ReactNode }) {
+  return <span style={badge}>{children}</span>;
 }
 
 export function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {

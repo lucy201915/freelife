@@ -1,7 +1,8 @@
-import { useState, useRef, useMemo, useEffect, type ChangeEvent, type KeyboardEvent, type CSSProperties } from "react";
+import { useState, useRef, useMemo, useEffect, type ChangeEvent, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { C, fmt, grid, wrap, type IconName } from "../lib/theme";
+import { C, badge, btn, capsule, card, chip, fmt, grid, shadow, wrap, type IconName } from "../lib/theme";
 import { listPublicTalents, listPublicServices } from "../lib/supabase";
+import { SAMPLE_TALENTS, type Talent, type TalentType } from "../lib/samples";
 import { useAuth } from "../lib/auth";
 import { Icon, Leaf, Photo, Stars, initialsOf, SecHead, Pill } from "../components/ui";
 
@@ -65,6 +66,7 @@ type LiveTalentRow = {
   img: string;
   city: string;
   id?: string;
+  username?: string;
 };
 
 function mapLiveTalent(row: any, _index: number): LiveTalentRow {
@@ -72,6 +74,7 @@ function mapLiveTalent(row: any, _index: number): LiveTalentRow {
   const from = Number(row.project_min) > 0 ? Number(row.project_min) : (Number(row.hourly_min) || 0);
   return {
     id: String(row.id || ""),
+    username: String(row.username || ""),
     name: String(row.name || "專業人才"),
     title: String(row.headline || "專業顧問"),
     years: 0,
@@ -111,15 +114,6 @@ const CATS: Cat[] = [
   { name: "網站與數位開發", desc: "形象網站、電商、App 原型", count: "340+ 位人才", icon: "code" },
   { name: "內容與文案", desc: "品牌故事、新聞稿、SEO 文章", count: "470+ 位人才", icon: "doc" },
   { name: "數據分析", desc: "GA4 追蹤、儀表板、市場研究", count: "190+ 位人才", icon: "chart" },
-];
-
-type TalentType = "數位遊牧" | "重返職場媽媽" | "資深自由工作者";
-type Talent = { name: string; title: string; years: number; type: TalentType | "專業人才"; skills: string[]; rating: number; reviews: number; from: number; img: string; city: string; id?: string };
-const TALENTS: Talent[] = [
-  { name: "陳思妤", title: "品牌行銷與公關顧問", years: 12, type: "重返職場媽媽", skills: ["行銷公關", "社群策略"], rating: 4.9, reviews: 128, from: 3600, img: "asset:t1.jpg", city: "台北" },
-  { name: "林哲宇", title: "全端工程師・網站架構", years: 8, type: "數位遊牧", skills: ["網站開發", "電商串接"], rating: 4.9, reviews: 86, from: 8000, img: "asset:t2.jpg", city: "清邁／台中" },
-  { name: "王雅琳", title: "營運管理與流程顧問", years: 15, type: "資深自由工作者", skills: ["營運流程", "專案管理"], rating: 4.8, reviews: 104, from: 5000, img: "asset:t3.jpg", city: "新竹" },
-  { name: "張凱婷", title: "品牌視覺設計師", years: 10, type: "數位遊牧", skills: ["品牌識別", "包裝設計"], rating: 5.0, reviews: 67, from: 6500, img: "asset:t4.jpg", city: "峇里島／台北" },
 ];
 
 type Service = { id: number; title: string; cat: string; seller: string; badge: string; items: string[]; days: number; price: number; rating: number; reviews: number; popular?: boolean };
@@ -196,7 +190,7 @@ export default function HomePage() {
     return SERVICES.filter((s: Service) => (cat === "全部" || s.cat === cat) && (!t || (s.title + s.cat + s.seller + s.items.join("")).toLowerCase().includes(t)));
   }, [applied, cat]);
 
-  const talentSource: Talent[] = liveTalents && liveTalents.length ? liveTalents : TALENTS;
+  const talentSource: Talent[] = liveTalents && liveTalents.length ? liveTalents : SAMPLE_TALENTS;
   const talents = talentSource.filter((t: Talent) => ttype === "全部" || t.type === ttype);
 
   useEffect(() => {
@@ -289,26 +283,10 @@ export default function HomePage() {
 
   const serviceTabs = ["全部", "行銷公關", "品牌設計", "B2B 業務開發", "網站與數位開發", "營運流程優化"];
 
-  const btn = (kind: "primary" | "ghost" | "light", big = false): CSSProperties => ({
-    border: kind === "ghost" ? `1.5px solid ${C.forest}` : "none",
-    background: kind === "primary" ? C.forest : kind === "light" ? C.ivory : "transparent",
-    color: kind === "primary" ? C.ivory : C.forest,
-    borderRadius: 999,
-    padding: big ? "15px 30px" : "10px 20px",
-    fontSize: big ? 16 : 15,
-    fontWeight: 600,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    minHeight: 44,
-    whiteSpace: "nowrap",
-  });
-
-  const card: CSSProperties = { background: C.white, border: `1px solid ${C.line}`, borderRadius: 22, overflow: "hidden" };
   const navItems: { label: string; on: () => void }[] = [
+    { label: "找專業", on: () => { setMenu(false); navigate("/talents"); } },
+    { label: "找專案", on: () => { setMenu(false); navigate("/projects"); } },
     { label: "探索服務", on: () => { setMenu(false); navigate("/services"); } },
-    { label: "尋找人才", on: () => go(talentRef) },
     { label: "成為人才", on: () => go(joinRef) },
     ...(profile ? [{ label: "工作台", on: () => { setMenu(false); navigate("/dashboard"); } }] : []),
   ];
@@ -382,8 +360,8 @@ export default function HomePage() {
         <div className="fl-hero-scrim" aria-hidden="true" />
         <div className="fl-hero-grid fl-sec" style={{ ...wrap, paddingTop: 80, paddingBottom: 88 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 8, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 14px 6px 8px", fontSize: 13, color: C.ink2, marginBottom: 24, maxWidth: "100%" }}>
-              <span style={{ background: C.goldLight, color: "#7A5F2E", borderRadius: 999, padding: "2px 10px", fontWeight: 600, whiteSpace: "nowrap" }}>台灣在地</span>
+            <div style={{ ...capsule, marginBottom: 24 }}>
+              <span style={badge}>台灣在地</span>
               數位遊牧・資深自由工作者・重返職場媽媽
             </div>
             <h1 className="fl-h1" style={{ margin: 0, fontWeight: 800, color: C.ink }}>
@@ -393,7 +371,7 @@ export default function HomePage() {
               FREELIFE 匯聚經過認證的資深專業人才，以透明定價的標準化服務，陪伴台灣中小企業與新創彈性取得行銷、設計、業務與營運的專業力。
             </p>
 
-            <div className="fl-search" style={{ marginTop: 32, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, boxShadow: "0 18px 40px rgba(31,61,43,.08)" }}>
+            <div className="fl-search" style={{ marginTop: 32, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, boxShadow: shadow }}>
               <div style={{ flex: "1 1 200px", display: "flex", alignItems: "center", gap: 10, padding: "0 12px", minWidth: 0 }}>
                 <Icon name="search" color={C.ink3} />
                 <input
@@ -410,7 +388,7 @@ export default function HomePage() {
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 18 }}>
               <span style={{ fontSize: 14, color: C.ink3, marginRight: 4 }}>熱門搜尋：</span>
               {["品牌設計", "開發信", "新聞稿", "形象網站", "SOP"].map((s: string) => (
-                <button key={s} className="fl-chip" onClick={() => runSearch(s)} style={{ border: `1px solid ${C.line}`, background: "transparent", color: C.ink2, borderRadius: 999, padding: "6px 14px", fontSize: 13 }}>{s}</button>
+                <button key={s} className="fl-chip" onClick={() => runSearch(s)} style={chip}>{s}</button>
               ))}
             </div>
 
@@ -493,12 +471,13 @@ export default function HomePage() {
           <div style={grid(250, 22)}>
             {talents.map((t: Talent) => {
               const isSaved = saved.includes(t.name);
+              const href = t.username || t.slug || t.id;
               return (
-                <div key={t.name} className="fl-card" style={card}>
+                <div key={t.username || t.slug || t.name} className="fl-card" style={{ ...card, cursor: href ? "pointer" : undefined }} onClick={() => href && navigate(`/talents/${href}`)}>
                   <div style={{ position: "relative", padding: 10 }}>
                     <Photo src={t.img} alt={`${t.name}的專業形象照`} height={260} radius={16} initials={initialsOf(t.name)} />
                     <span style={{ position: "absolute", top: 22, left: 22, background: "rgba(255,253,249,.94)", color: C.forest, borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>{t.type}</span>
-                    <button className="fl-btn" aria-label="收藏" onClick={() => toggleFavorite(t)} style={{ position: "absolute", top: 18, right: 18, width: 38, height: 38, borderRadius: 999, border: "none", background: "rgba(255,253,249,.94)", color: isSaved ? "#B4533C" : C.ink3, fontSize: 18, display: "grid", placeItems: "center" }}>{isSaved ? "♥" : "♡"}</button>
+                    <button className="fl-btn" aria-label="收藏" onClick={(e) => { e.stopPropagation(); void toggleFavorite(t); }} style={{ position: "absolute", top: 18, right: 18, width: 38, height: 38, borderRadius: 999, border: "none", background: "rgba(255,253,249,.94)", color: isSaved ? "#B4533C" : C.ink3, fontSize: 18, display: "grid", placeItems: "center" }}>{isSaved ? "♥" : "♡"}</button>
                   </div>
                   <div style={{ padding: "8px 22px 22px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -520,6 +499,9 @@ export default function HomePage() {
                 </div>
               );
             })}
+          </div>
+          <div style={{ marginTop: 28, textAlign: "center" }}>
+            <button className="fl-btn fl-ghost" style={btn("ghost")} onClick={() => navigate("/talents")}>看全部專業人才</button>
           </div>
         </div>
       </div>

@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [reqTags, setReqTags] = useState("");
   const [reqMin, setReqMin] = useState("10000");
   const [reqMax, setReqMax] = useState("50000");
+  const [reqTimeline, setReqTimeline] = useState("");
   const [reqBusy, setReqBusy] = useState(false);
   const [reqError, setReqError] = useState("");
   const [reqId, setReqId] = useState<string | null>(null);
@@ -156,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setReqTags(prefill?.tags || "");
     setReqMin("10000");
     setReqMax("50000");
+    setReqTimeline("");
     setReqError("");
     setReqId(null);
     setReqStep("form");
@@ -177,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (budget_min < 1000) throw new Error("最低預算需至少 NT$1,000");
       if (budget_max < budget_min) throw new Error("最高預算不可低於最低預算");
       const tags = reqTags.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
-      const { data, error } = await sb.from("requests").insert({
+      const payload: Record<string, unknown> = {
         business_id: profile.id,
         title,
         brief,
@@ -185,7 +187,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         budget_min,
         budget_max,
         status: "open",
-      }).select("id").single();
+      };
+      if (reqTimeline.trim()) payload.timeline = reqTimeline.trim().slice(0, 200);
+      const { data, error } = await sb.from("requests").insert(payload).select("id").single();
       if (error) throw error;
       setReqId(data?.id || null);
       setReqStep("payment");
@@ -273,6 +277,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.ink2, marginBottom: 6 }}>標籤（逗號分隔）</div>
                     <input className="fl-input" value={reqTags} onChange={(e) => setReqTags(e.target.value)} style={inputStyle} />
                   </label>
+                  <label style={{ display: "block", marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.ink2, marginBottom: 6 }}>期望時程（選填）</div>
+                    <input className="fl-input" value={reqTimeline} onChange={(e) => setReqTimeline(e.target.value)} placeholder="例如：四週內完成" style={inputStyle} />
+                  </label>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <label>
                       <div style={{ fontSize: 13, fontWeight: 600, color: C.ink2, marginBottom: 6 }}>最低預算</div>
@@ -318,6 +326,14 @@ const inputStyle = {
   fontFamily: "inherit",
 };
 
+function navActive(pathname: string, label: string): boolean {
+  if (label === "找專業") return pathname.startsWith("/talents");
+  if (label === "找專案") return pathname.startsWith("/projects");
+  if (label === "探索服務") return pathname.startsWith("/services");
+  if (label === "工作台") return pathname.startsWith("/dashboard");
+  return false;
+}
+
 export function SiteHeader({ extraNav }: { extraNav?: { label: string; on: () => void }[] }) {
   const { profile, openAuth, handleSignOut } = useAuth();
   const navigate = useNavigate();
@@ -325,8 +341,9 @@ export function SiteHeader({ extraNav }: { extraNav?: { label: string; on: () =>
   const [menu, setMenu] = useState(false);
 
   const navItems = [
+    { label: "找專業", on: () => { setMenu(false); navigate("/talents"); } },
+    { label: "找專案", on: () => { setMenu(false); navigate("/projects"); } },
     { label: "探索服務", on: () => { setMenu(false); navigate("/services"); } },
-    { label: "尋找人才", on: () => { setMenu(false); navigate("/#talent"); } },
     { label: "成為人才", on: () => { setMenu(false); navigate("/#join"); } },
     ...(profile ? [{ label: "工作台", on: () => { setMenu(false); navigate("/dashboard"); } }] : []),
     ...(extraNav || []),
@@ -342,7 +359,7 @@ export function SiteHeader({ extraNav }: { extraNav?: { label: string; on: () =>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div className="fl-navlinks" style={{ display: "flex", alignItems: "center", gap: 34 }}>
             {navItems.map((n) => (
-              <span key={n.label} className="fl-link" onClick={n.on} style={{ fontSize: 15, color: location.pathname.startsWith("/services") && n.label === "探索服務" ? C.forest : C.ink2, fontWeight: 500 }}>{n.label}</span>
+              <span key={n.label} className="fl-link" onClick={n.on} style={{ fontSize: 15, color: navActive(location.pathname, n.label) ? C.forest : C.ink2, fontWeight: navActive(location.pathname, n.label) ? 700 : 500 }}>{n.label}</span>
             ))}
           </div>
           {profile ? (

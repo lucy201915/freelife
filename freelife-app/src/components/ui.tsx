@@ -3,11 +3,14 @@ import { C, type IconName } from "../lib/theme";
 
 export function Image({
   src,
-  alt,
+  alt = "",
   fit = "cover",
   height,
   width,
   style,
+  loading = "lazy",
+  decoding = "async",
+  fetchPriority,
   ...rest
 }: {
   src: string;
@@ -16,14 +19,23 @@ export function Image({
   height?: number | string;
   width?: number | string;
   style?: CSSProperties;
+  loading?: "lazy" | "eager";
+  decoding?: "async" | "auto" | "sync";
+  fetchPriority?: "high" | "low" | "auto";
   [key: string]: unknown;
 }) {
   const resolved =
     typeof src === "string" && src.startsWith("asset:") ? "/images/" + src.slice("asset:".length) : src;
   return (
     <img
+      {...rest}
       src={resolved}
-      alt={alt ?? ""}
+      alt={alt}
+      loading={loading}
+      decoding={decoding}
+      {...(fetchPriority ? { fetchPriority } : {})}
+      width={typeof width === "number" ? width : undefined}
+      height={typeof height === "number" ? height : undefined}
       style={{
         display: "block",
         width: width ?? "100%",
@@ -32,7 +44,6 @@ export function Image({
         objectPosition: "center",
         ...style,
       }}
-      {...rest}
     />
   );
 }
@@ -72,13 +83,21 @@ export function Leaf({ size = 30 }: { size?: number }) {
   );
 }
 
-export function Photo({ src, alt, height, radius = 20, initials }: { src: string; alt: string; height: number; radius?: number; initials?: string }) {
+export function Photo({ src, alt, height, radius = 20, initials, priority = false }: { src: string; alt: string; height: number; radius?: number; initials?: string; priority?: boolean }) {
   return (
     <div style={{ borderRadius: radius, overflow: "hidden", background: C.sageMist, lineHeight: 0, position: "relative" }}>
       {src ? (
-        <Image src={src} alt={alt} fit="cover" height={height} />
+        <Image
+          src={src}
+          alt={alt}
+          fit="cover"
+          height={height}
+          loading={priority ? "eager" : "lazy"}
+          decoding={priority ? "auto" : "async"}
+          fetchPriority={priority ? "high" : undefined}
+        />
       ) : (
-        <div style={{ height, width: "100%", display: "grid", placeItems: "center", background: C.forest, color: C.ivory, fontWeight: 700, fontSize: Math.max(18, Math.round(height / 5)) }} aria-label={alt}>
+        <div role="img" aria-label={alt} style={{ height, width: "100%", display: "grid", placeItems: "center", background: C.forest, color: C.ivory, fontWeight: 700, fontSize: Math.max(18, Math.round(height / 5)) }}>
           {initials || ""}
         </div>
       )}
@@ -105,12 +124,13 @@ export function Eyebrow({ children }: { children: ReactNode }) {
   return <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600, marginBottom: 12 }}>{children}</div>;
 }
 
-export function SecHead({ eyebrow, title, sub, right }: { eyebrow: string; title: string; sub?: string; right?: ReactNode }) {
+export function SecHead({ eyebrow, title, sub, right, as = "h2" }: { eyebrow: string; title: string; sub?: string; right?: ReactNode; as?: "h1" | "h2" }) {
+  const Heading = as;
   return (
     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 40 }}>
       <div style={{ flex: "1 1 320px", minWidth: 0 }}>
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h2 className="fl-h2" style={{ margin: 0, color: C.ink, fontWeight: 700 }}>{title}</h2>
+        <Heading className="fl-h2" style={{ margin: 0, color: C.ink, fontWeight: 700 }}>{title}</Heading>
         {sub ? <p style={{ margin: "12px 0 0", color: C.ink2, fontSize: 16, lineHeight: 1.7, maxWidth: 620 }}>{sub}</p> : null}
       </div>
       {right}

@@ -1,4 +1,4 @@
-# FREELIFE 應用程式
+# Freeli 應用程式
 
 台灣雙邊自由工作市集。本專案由既有首頁匯出（`/workspace/freelife-export/`）擴充為可部署的 Vite + React 應用，並接上現有 Supabase 專案 `zutptboedajchpbvfijn`。首頁、品牌、導覽、頁尾、登入／註冊視窗與「付款（即將開放）」行為均予保留。
 
@@ -15,9 +15,9 @@
 
 ### 應用程式原始碼
 - `src/main.tsx` — `BrowserRouter` 入口
-- `src/App.tsx` — 路由：`/`、`/services`、`/services/:slug`、`/dashboard`
+- `src/App.tsx` — 路由：`/`、`/services`、`/services/:slug`、`/faq`、`/dashboard`
 - `src/index.css` — 與畫布相同的 host reset
-- `src/lib/theme.ts` — FREELIFE 色票與共用樣式（森林／鼠尾草／象牙）
+- `src/lib/theme.ts` — Freeli 色票與共用樣式（森林／鼠尾草／象牙）
 - `src/lib/supabase.ts` — npm `supabase-js` 用戶端、公開目錄查詢、`startPayment()` 空實作
 - `src/lib/auth.tsx` — 登入／註冊、需求表單、付款佔位、共用頁首頁尾
 - `src/components/ui.tsx` — Image shim、圖示、表單元件
@@ -104,9 +104,15 @@ cd freelife-app
 cp .env.example .env   # 填入 URL 與 anon key
 npm install
 npm run dev            # 本機開發，預設 http://localhost:5173
-npm run build          # 輸出到 dist/
+npm run build          # 型別檢查、打包，並預渲染公開頁與 robots／sitemap／llms
 npm run preview        # 預覽生產建置
 ```
+
+## SEO
+
+公開頁（首頁、服務列表、服務詳情、常見問題）在 `npm run build` 時預先渲染成靜態 HTML，搜尋引擎與不執行 JavaScript 的 AI 爬蟲可以直接讀到標題、內文與 JSON-LD。`robots.txt` 允許一般爬蟲與 GPTBot、Google-Extended、ClaudeBot、CCBot、PerplexityBot 等；工作台、訊息、合約、訂單與付款路徑為 `noindex` 且 Disallow。
+
+目前標準網址是 `https://freelife-tau.vercel.app`，寫在 `src/lib/site.ts` 的 `SITE_ORIGIN`。換成自訂網域時改這個常數，並把舊網址轉址過去。新的公開頁面使用 `src/components/Seo.tsx` 的 `<Seo>`。建置要列出服務詳情，環境需有 `VITE_SUPABASE_URL` 與 `VITE_SUPABASE_ANON_KEY`（公開 anon／publishable key，不可放 service role）。
 
 ### 部署到 Netlify（拖放）
 
@@ -130,11 +136,11 @@ npm run preview        # 預覽生產建置
 | 6 | `/services/:slug` 讀資料庫，Fiverr 雙欄布局 | 通過。標題、人才（吳沛慈）、輪播、說明、方案、FAQ、作品、相關服務皆來自 DB。 |
 | 7 | Basic／Standard／Premium 即時更新價格、天數、修訂、項目 | 通過。Standard NT$12,800／10 天／2 次；Basic NT$4,800／5／1；Premium NT$24,800／14／3。 |
 | 8 | 桌面「立即合作」「聯絡人才」與收藏愛心；行動版底部固定 CTA | 通過。390 寬度底部列為 `position: fixed; display: flex`，含價格、聯絡、立即合作。 |
-| 9 | 載入／錯誤／空狀態與 SEO（title、description、OG） | 通過。不存在的 slug 顯示「找不到這個服務」。詳情頁 title／og:title 為服務名稱｜FREELIFE。 |
+| 9 | 載入／錯誤／空狀態與 SEO（title、description、OG） | 通過。不存在的 slug 顯示「找不到這個服務」。詳情頁 title／og:title 為服務名稱｜FREELI。 |
 | 10 | 價格與訂單狀態由伺服器驗證；RLS 禁止前端改價改狀態 | 通過。21 項 SQL  isolation 全數通過：企業下單快照 standard＝12800；直接 UPDATE 被拒；人才不可下單；他方看不見訂單；非法流轉被拒；完成前不能評價；重複評價被拒；收藏隔離。 |
 | 11 | 種子資料可識別、未修改既有列 | 通過。5 筆服務掛在既有人才 id 上，固定 UUID，migration 名稱 `seed_sample_services`。 |
 | 12 | 未把 `service_role` 放入前端；付款維持空實作 | 通過。前端僅有 anon／publishable key。下單後仍顯示停用的「付款（即將開放）」。 |
-| 13 | 建置產物可部署：`dist/` 含 `_redirects` 與圖片 | 通過。`npm run build` 成功。測試後已刪除所有 `[TEST-FREELIFE-APP]` 列，且沒有新增 auth 使用者。 |
+| 13 | 建置產物可部署：`dist/` 含 `_redirects` 與圖片 | 通過。`npm run build` 成功。測試後已刪除所有 `[TEST-Freeli-APP]` 列，且沒有新增 auth 使用者。 |
 
 螢幕截圖見 `/workspace/freelife-app-shots/`（桌面首頁、登入、列表、詳情 Basic／Standard／Premium、空狀態；行動首頁、詳情與底部 CTA）。
 

@@ -1,6 +1,8 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
+import { Seo } from "../components/Seo";
 import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
+import { BRAND_WORDMARK } from "../lib/site";
 import { C, CATEGORIES, ORDER_STATUS_LABEL, TIER_LABEL, btn, card, fmt, wrap } from "../lib/theme";
 import { publicMediaUrl, rpcMessage, type FlProfile } from "../lib/supabase";
 import { Field, Pill, Stars } from "../components/ui";
@@ -56,19 +58,28 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<Tab>(defaultTab);
 
   useEffect(() => {
-    document.title = "工作台｜FREELIFE";
     if (profile) setTab(profile.role === "talent" ? "services" : "orders");
-  }, [profile?.id]);
+  }, [profile]);
+
+  const seo = (
+    <Seo
+      title={`工作台｜${BRAND_WORDMARK}`}
+      description="Freeli 工作台只供登入後管理自己的服務、訂單與訊息，不會對搜尋引擎公開。"
+      path="/dashboard"
+      noindex
+    />
+  );
 
   if (!profile) {
     return (
       <>
+        {seo}
         <SiteHeader />
-        <div style={{ ...wrap, padding: "80px 24px", textAlign: "center" }}>
+        <main style={{ ...wrap, padding: "80px 24px", textAlign: "center" }}>
           <h1 style={{ fontSize: 28, marginBottom: 12, color: C.ink }}>請先登入工作台</h1>
           <p style={{ color: C.ink2, marginBottom: 24 }}>登入後即可管理服務、訂單與訊息。</p>
           <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => openAuth("login")}>登入</button>
-        </div>
+        </main>
         <SiteFooter />
       </>
     );
@@ -90,8 +101,9 @@ export default function DashboardPage() {
 
   return (
     <>
+      {seo}
       <SiteHeader />
-      <div style={{ ...wrap, paddingTop: 36, paddingBottom: 88 }}>
+      <main style={{ ...wrap, paddingTop: 36, paddingBottom: 88 }}>
         <div style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600, marginBottom: 8 }}>工作台</div>
           <h1 style={{ fontSize: 32, fontWeight: 800, color: C.ink }}>你好，{profile.name}</h1>
@@ -109,7 +121,7 @@ export default function DashboardPage() {
         {tab === "favorites" && isBusiness ? <FavoritesPanel profile={profile} /> : null}
         {tab === "invites" && isBusiness ? <InvitesPanel profile={profile} /> : null}
         {!sb ? <p style={{ color: "#B4533C" }}>尚未連上資料庫。</p> : null}
-      </div>
+      </main>
       <SiteFooter />
     </>
   );
@@ -328,7 +340,7 @@ function ServiceEditor({
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {images.map((src) => (
             <div key={src} style={{ width: 96, height: 72, borderRadius: 10, overflow: "hidden", position: "relative", background: C.sageMist }}>
-              <img src={publicMediaUrl(src) || src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <img src={publicMediaUrl(src) || src} alt="已上傳的服務圖片" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               <button type="button" onClick={() => setImages(images.filter((x) => x !== src))} style={{ position: "absolute", top: 2, right: 2, border: "none", borderRadius: 999, width: 22, height: 22, background: C.white }}>×</button>
             </div>
           ))}
@@ -379,7 +391,7 @@ function ServiceEditor({
         <div key={i} style={{ border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
           <Field label="作品標題" value={p.title} onChange={(v) => setPorts(ports.map((x, j) => j === i ? { ...x, title: v } : x))} />
           <Field label="說明" value={p.summary} textarea onChange={(v) => setPorts(ports.map((x, j) => j === i ? { ...x, summary: v } : x))} />
-          {p.image_path ? <img src={publicMediaUrl(p.image_path) || p.image_path} alt="" style={{ width: 160, height: 100, objectFit: "cover", borderRadius: 10 }} /> : null}
+          {p.image_path ? <img src={publicMediaUrl(p.image_path) || p.image_path} alt={p.title || "作品圖片"} loading="lazy" decoding="async" style={{ width: 160, height: 100, objectFit: "cover", borderRadius: 10 }} /> : null}
           <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onUpload(f, "port", i); e.target.value = ""; }} />
           <button type="button" className="fl-btn fl-ghost" style={{ ...btn("ghost"), marginTop: 8 }} onClick={() => setPorts(ports.filter((_, j) => j !== i))}>移除此筆</button>
         </div>

@@ -1,43 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Breadcrumbs } from "../components/Breadcrumbs";
+import { Seo, breadcrumbJsonLd, faqPageJsonLd, graph, organizationJsonLd, serviceJsonLd, websiteJsonLd } from "../components/Seo";
 import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
+import { useBootstrap } from "../lib/bootstrap";
+import { BRAND_WORDMARK, absoluteUrl, catalogPath, summarize } from "../lib/site";
 import { C, TIER_LABEL, btn, card, fmt, wrap } from "../lib/theme";
 import { getPublicServicePage, publicMediaUrl, rpcMessage, startPayment, type ServicePackage, type ServicePage } from "../lib/supabase";
 import { Icon, Image, Photo, Stars, initialsOf } from "../components/ui";
-
-function useSeo(title: string, description: string, url?: string, image?: string) {
-  useEffect(() => {
-    const prevTitle = document.title;
-    document.title = title;
-    const tags: { sel: string; attr: string; el: HTMLMetaElement }[] = [];
-    const set = (attr: "name" | "property", key: string, value: string) => {
-      const sel = `meta[${attr}="${key}"]`;
-      let el = document.head.querySelector(sel) as HTMLMetaElement | null;
-      if (!el) {
-        el = document.createElement("meta");
-        el.setAttribute(attr, key);
-        document.head.appendChild(el);
-      }
-      el.setAttribute("content", value);
-      tags.push({ sel, attr, el });
-    };
-    if (description) {
-      set("name", "description", description);
-      set("property", "og:description", description);
-    }
-    set("property", "og:title", title);
-    set("property", "og:type", "website");
-    if (url) set("property", "og:url", url);
-    if (image) set("property", "og:image", image);
-    return () => { document.title = prevTitle; };
-  }, [title, description, url, image]);
-}
 
 export default function ServiceDetailPage() {
   const { slug = "" } = useParams();
   const navigate = useNavigate();
   const { sb, profile, openAuth, setNotice } = useAuth();
-  const [page, setPage] = useState<ServicePage | null | undefined>(undefined);
+  const boot = useBootstrap();
+  const initialPage = boot.servicePages?.[slug];
+  const [page, setPage] = useState<ServicePage | null | undefined>(initialPage === undefined ? undefined : initialPage);
+  const [pageSlug, setPageSlug] = useState(slug);
+  if (pageSlug !== slug) {
+    setPageSlug(slug);
+    const next = boot.servicePages?.[slug];
+    setPage(next === undefined ? undefined : next);
+  }
   const [error, setError] = useState("");
   const [tier, setTier] = useState<"basic" | "standard" | "premium">("standard");
   const [imgIdx, setImgIdx] = useState(0);
@@ -54,7 +38,6 @@ export default function ServiceDetailPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setPage(undefined);
     setError("");
     setImgIdx(0);
     setOrderOpen(false);
@@ -87,13 +70,34 @@ export default function ServiceDetailPage() {
     return () => { cancelled = true; };
   }, [sb, profile, page?.service.id]);
 
-  const desc = page?.service.description?.replace(/\s+/g, " ").slice(0, 140) || "FREELIFE 標準化服務";
-  const cover = page?.service.images?.[0] ? (page.service.images[0].startsWith("http") ? page.service.images[0] : window.location.origin + (page.service.images[0].startsWith("/") ? page.service.images[0] : "/" + page.service.images[0])) : undefined;
-  useSeo(
-    page ? `${page.service.title}｜FREELIFE` : error ? "找不到服務｜FREELIFE" : "載入中｜FREELIFE",
-    desc,
-    typeof window !== "undefined" ? window.location.href : undefined,
-    cover,
+  const desc = page?.service.description ? summarize(page.service.description, 150) : "Freeli 標準化服務：明列交付物、天數與固定價格。";
+  const rawImage = page?.service.images?.[0];
+  const image = rawImage ? absoluteUrl(publicMediaUrl(rawImage) || rawImage) : undefined;
+  const faqs = (page?.faqs || []).map((f) => ({ question: f.question, answer: f.answer }));
+  const serviceLd = page ? serviceJsonLd(page) : null;
+  const seo = (
+    <Seo
+      title={page ? `${page.service.title}｜${BRAND_WORDMARK}` : error ? `找不到服務｜${BRAND_WORDMARK}` : `服務｜${BRAND_WORDMARK}`}
+      description={desc}
+      path={page ? `/services/${page.service.slug}` : "/services"}
+      image={image}
+      imageAlt={page?.service.title}
+      noindex={page === null}
+      preloadImage={rawImage && (rawImage.startsWith("/") || rawImage.startsWith("http")) ? (publicMediaUrl(rawImage) || rawImage) : image}
+      jsonLd={page && serviceLd ? graph(
+        organizationJsonLd(),
+        websiteJsonLd(),
+        breadcrumbJsonLd([
+          { name: "首頁", path: "/" },
+          { name: "探索服務", path: "/services" },
+          { name: page.service.category, path: catalogPath(page.service.category) },
+          { name: page.service.title, path: `/services/${page.service.slug}` },
+        ]),
+        serviceLd.service,
+        serviceLd.person,
+        faqPageJsonLd(faqs),
+      ) : graph(organizationJsonLd(), websiteJsonLd())}
+    />
   );
 
   const pkg: ServicePackage | undefined = useMemo(
@@ -189,8 +193,12 @@ export default function ServiceDetailPage() {
   if (page === undefined && !error) {
     return (
       <>
+        {seo}
         <SiteHeader />
-        <div style={{ ...wrap, padding: "80px 24px", textAlign: "center", color: C.ink3 }}>載入服務內容中…</div>
+        <main style={{ ...wrap, padding: "80px 24px", textAlign: "center", color: C.ink3 }}>
+          <h1 style={{ fontSize: 28, color: C.ink, marginBottom: 12 }}>載入服務內容</h1>
+          <p>正在讀取這個服務的說明、方案與常見問題。</p>
+        </main>
         <SiteFooter />
       </>
     );
@@ -199,12 +207,13 @@ export default function ServiceDetailPage() {
   if (!page) {
     return (
       <>
+        {seo}
         <SiteHeader />
-        <div style={{ ...wrap, padding: "80px 24px", textAlign: "center" }}>
+        <main style={{ ...wrap, padding: "80px 24px", textAlign: "center" }}>
           <h1 style={{ fontSize: 30, color: C.ink, marginBottom: 12 }}>找不到這個服務</h1>
           <p style={{ color: C.ink2, marginBottom: 24 }}>{error || "服務可能已下架，或網址不正確。"}</p>
-          <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => navigate("/services")}>回到服務列表</button>
-        </div>
+          <Link to="/services" className="fl-btn fl-primary" style={{ ...btn("primary"), textDecoration: "none" }}>回到服務列表</Link>
+        </main>
         <SiteFooter />
       </>
     );
@@ -247,12 +256,15 @@ export default function ServiceDetailPage() {
 
   return (
     <>
+      {seo}
       <SiteHeader />
-      <div style={{ ...wrap, paddingTop: 36, paddingBottom: 120 }}>
-        <div style={{ fontSize: 13, color: C.ink3, marginBottom: 18 }}>
-          <span className="fl-link" onClick={() => navigate("/services")}>探索服務</span>
-          <span> ／ {page.service.category} ／ {page.service.title}</span>
-        </div>
+      <main style={{ ...wrap, paddingTop: 36, paddingBottom: 120 }}>
+        <Breadcrumbs items={[
+          { name: "首頁", to: "/" },
+          { name: "探索服務", to: "/services" },
+          { name: page.service.category, to: catalogPath(page.service.category) },
+          { name: page.service.title },
+        ]} />
 
         <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.65fr) minmax(280px, 0.9fr)", gap: 36, alignItems: "start" }}>
           <div>
@@ -272,13 +284,13 @@ export default function ServiceDetailPage() {
             {images.length ? (
               <div style={{ marginBottom: 28 }}>
                 <div style={{ borderRadius: 20, overflow: "hidden", background: C.sageMist }}>
-                  <Image src={publicMediaUrl(images[imgIdx]) || images[imgIdx]} alt={page.service.title} height={420} />
+                  <Image src={publicMediaUrl(images[imgIdx]) || images[imgIdx]} alt={page.service.title} height={420} loading="eager" fetchPriority="high" decoding="auto" />
                 </div>
                 {images.length > 1 ? (
                   <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto" }}>
                     {images.map((src, i) => (
                       <button key={src + i} onClick={() => setImgIdx(i)} style={{ border: `2px solid ${i === imgIdx ? C.forest : "transparent"}`, padding: 0, borderRadius: 12, overflow: "hidden", width: 84, height: 64, background: C.sageMist }}>
-                        <Image src={publicMediaUrl(src) || src} alt="" height={64} />
+                        <Image src={publicMediaUrl(src) || src} alt={`${page.service.title} 圖 ${i + 1}`} height={64} />
                       </button>
                     ))}
                   </div>
@@ -314,7 +326,7 @@ export default function ServiceDetailPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 16 }}>
                   {page.portfolios.map((p) => (
                     <div key={p.id} style={{ ...card, padding: 0 }}>
-                      {p.image_path ? <Photo src={publicMediaUrl(p.image_path) || p.image_path} alt={p.title} height={150} radius={0} /> : null}
+                      {p.image_path ? <Photo src={publicMediaUrl(p.image_path) || p.image_path} alt={p.title || "作品"} height={150} radius={0} /> : null}
                       <div style={{ padding: 16 }}>
                         <div style={{ fontWeight: 700, color: C.ink }}>{p.title}</div>
                         {p.summary ? <div style={{ fontSize: 14, color: C.ink2, marginTop: 6 }}>{p.summary}</div> : null}
@@ -380,7 +392,7 @@ export default function ServiceDetailPage() {
 
           <PackageCard desktopCta />
         </div>
-      </div>
+      </main>
 
       <div className="fl-mobile-cta" style={{ display: "none", position: "fixed", left: 0, right: 0, bottom: 0, background: "rgba(250,246,238,.96)", borderTop: `1px solid ${C.line}`, padding: "10px 16px calc(10px + env(safe-area-inset-bottom))", zIndex: 50, gap: 10, alignItems: "center", justifyContent: "space-between" }}>
         <div>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ChangeEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { C, btn, wrap, FONT, CSS } from "./theme";
 import { getSb, startPayment, type FlProfile } from "./supabase";
 import { Leaf, Icon } from "../components/ui";
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await sb.from("profiles").select("id, name, username, role, company").eq("id", userId).maybeSingle();
       if (cancelled) return;
       if (error) {
-        console.warn("[FREELIFE] profile load failed", error);
+        console.warn("[FREELI] profile load failed", error);
         setProfile(null);
         return;
       }
@@ -202,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={value}>
-      <div className="fl" lang="zh-Hant" style={{ background: C.ivory, color: C.ink, fontFamily: FONT, lineHeight: 1.6, minHeight: "100%" }}>
+      <div className="fl" lang="zh-Hant-TW" style={{ background: C.ivory, color: C.ink, fontFamily: FONT, lineHeight: 1.6, minHeight: "100%" }}>
         <style>{CSS}</style>
         {notice ? (
           <div style={{ background: C.sageMist, color: C.forest, fontSize: 14, textAlign: "center", padding: "10px 16px" }}>
@@ -332,18 +332,26 @@ export function SiteHeader({ extraNav }: { extraNav?: { label: string; on: () =>
     ...(extraNav || []),
   ];
 
+  const linkFor = (label: string) => label === "探索服務" ? "/services" : label === "尋找人才" ? "/#talent" : label === "成為人才" ? "/#join" : label === "工作台" ? "/dashboard" : null;
+
   return (
-    <div style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(250,246,238,.96)", position: "sticky", top: 0, zIndex: 40 }}>
-      <div style={{ ...wrap, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, minHeight: 76, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/")}>
+    <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(250,246,238,.96)", position: "sticky", top: 0, zIndex: 40 }}>
+      <nav aria-label="主要" style={{ ...wrap, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, minHeight: 76, flexWrap: "wrap" }}>
+        <Link to="/" aria-label="Freeli 首頁" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <Leaf />
-          <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: ".14em", color: C.forest }}>FREELIFE</span>
-        </div>
+          <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: ".14em", color: C.forest }}>FREELI</span>
+        </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div className="fl-navlinks" style={{ display: "flex", alignItems: "center", gap: 34 }}>
-            {navItems.map((n) => (
-              <span key={n.label} className="fl-link" onClick={n.on} style={{ fontSize: 15, color: location.pathname.startsWith("/services") && n.label === "探索服務" ? C.forest : C.ink2, fontWeight: 500 }}>{n.label}</span>
-            ))}
+            {navItems.map((n) => {
+              const href = linkFor(n.label);
+              const style = { fontSize: 15, color: location.pathname.startsWith("/services") && n.label === "探索服務" ? C.forest : C.ink2, fontWeight: 500, textDecoration: "none" as const };
+              return href ? (
+                <Link key={n.label} to={href} className="fl-link" style={style} onClick={() => { setMenu(false); n.on(); }}>{n.label}</Link>
+              ) : (
+                <span key={n.label} className="fl-link" onClick={n.on} style={style}>{n.label}</span>
+              );
+            })}
           </div>
           {profile ? (
             <>
@@ -358,12 +366,18 @@ export function SiteHeader({ extraNav }: { extraNav?: { label: string; on: () =>
           )}
           <button className="fl-btn fl-ghost fl-menu-btn" aria-label="選單" style={{ ...btn("ghost"), padding: 10, border: `1px solid ${C.line}` }} onClick={() => setMenu(!menu)}><Icon name="menu" /></button>
         </div>
-      </div>
+      </nav>
       {menu ? (
         <div style={{ ...wrap, paddingBottom: 16, display: "flex", flexDirection: "column", gap: 4 }}>
-          {navItems.map((n) => (
-            <span key={n.label} className="fl-link" onClick={n.on} style={{ padding: "12px 4px", borderTop: `1px solid ${C.line}`, fontSize: 16, color: C.ink }}>{n.label}</span>
-          ))}
+          {navItems.map((n) => {
+            const href = linkFor(n.label);
+            const style = { padding: "12px 4px", borderTop: `1px solid ${C.line}`, fontSize: 16, color: C.ink, textDecoration: "none" as const };
+            return href ? (
+              <Link key={n.label} to={href} className="fl-link" style={style} onClick={() => { setMenu(false); n.on(); }}>{n.label}</Link>
+            ) : (
+              <span key={n.label} className="fl-link" onClick={n.on} style={style}>{n.label}</span>
+            );
+          })}
           {profile ? (
             <span className="fl-link" onClick={() => { setMenu(false); void handleSignOut(); }} style={{ padding: "12px 4px", borderTop: `1px solid ${C.line}`, fontSize: 16, color: C.ink }}>登出（{profile.name}）</span>
           ) : (
@@ -371,37 +385,41 @@ export function SiteHeader({ extraNav }: { extraNav?: { label: string; on: () =>
           )}
         </div>
       ) : null}
-    </div>
+    </header>
   );
 }
 
 export function SiteFooter() {
-  const navigate = useNavigate();
-  const cols = [
-    { h: "探索服務", l: ["行銷公關", "品牌設計", "B2B 業務開發", "網站與數位開發"] },
-    { h: "關於 FREELIFE", l: ["我們的承諾", "人才認證", "企業合作"] },
-    { h: "幫助", l: ["常見問題", "合作保障", "聯繫我們"] },
+  const cols: { h: string; l: { label: string; href?: string }[] }[] = [
+    {
+      h: "探索服務",
+      l: ["行銷公關", "品牌設計", "B2B 業務開發", "網站與數位開發"].map((label) => ({ label, href: `/services?category=${encodeURIComponent(label)}` })),
+    },
+    { h: "關於 FREELI", l: [{ label: "我們的承諾" }, { label: "人才認證" }, { label: "企業合作" }] },
+    { h: "幫助", l: [{ label: "常見問題", href: "/faq" }, { label: "合作保障", href: "/faq" }, { label: "聯繫我們" }] },
   ];
   return (
-    <div style={{ borderTop: `1px solid ${C.line}`, background: C.ivory2, padding: "48px 0 28px" }}>
-      <div style={{ ...wrap, ...{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 32 } }}>
+    <footer style={{ borderTop: `1px solid ${C.line}`, background: C.ivory2, padding: "48px 0 28px" }}>
+      <div style={{ ...wrap, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 32 }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, textDecoration: "none" }}>
             <Leaf size={28} />
-            <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: ".14em", color: C.forest }}>FREELIFE</span>
-          </div>
+            <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: ".14em", color: C.forest }}>FREELI</span>
+          </Link>
           <p style={{ fontSize: 14, color: C.ink2, lineHeight: 1.7, maxWidth: 260 }}>專業不設限，工作有選擇。</p>
         </div>
         {cols.map((col) => (
           <div key={col.h}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 10 }}>{col.h}</div>
-            {col.l.map((x) => (
-              <div key={x} className="fl-link" style={{ fontSize: 14, color: C.ink2, padding: "4px 0" }} onClick={() => col.h === "探索服務" ? navigate(`/services?category=${encodeURIComponent(x)}`) : undefined}>{x}</div>
+            {col.l.map((item) => item.href ? (
+              <Link key={item.label} to={item.href} className="fl-link" style={{ display: "block", fontSize: 14, color: C.ink2, padding: "4px 0", textDecoration: "none" }}>{item.label}</Link>
+            ) : (
+              <div key={item.label} style={{ fontSize: 14, color: C.ink2, padding: "4px 0" }}>{item.label}</div>
             ))}
           </div>
         ))}
       </div>
-      <div style={{ ...wrap, marginTop: 32, paddingTop: 18, borderTop: `1px solid ${C.line}`, fontSize: 13, color: C.ink3 }}>© FREELIFE</div>
-    </div>
+      <div style={{ ...wrap, marginTop: 32, paddingTop: 18, borderTop: `1px solid ${C.line}`, fontSize: 13, color: C.ink3 }}>© FREELI</div>
+    </footer>
   );
 }

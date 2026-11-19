@@ -20,12 +20,57 @@ const HERO_CSS = `
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(90deg, rgba(250,246,238,0.92) 0%, rgba(250,246,238,0.10) 100%);
 }
-.fl-hero-grid {
-  position: relative; z-index: 2;
-  display: grid; grid-template-columns: minmax(0, 1fr); align-items: center;
+.fl-hero-grid { position: relative; z-index: 2; }
+.fl-hero-stage { display: flex; flex-direction: column; }
+.fl-hero-find { margin-top: 28px; width: 100%; max-width: 540px; }
+.fl-hero-search {
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(31,58,45,.16);
 }
-@media (min-width: 944px) {
-  .fl-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 56px; }
+.fl-hero-search-field { flex: 1 1 180px; min-width: 0; }
+.fl-hero .fl-hero-search:focus-within {
+  box-shadow: 0 0 0 3px rgba(166,25,46,.16), 0 18px 44px rgba(31,58,45,.16) !important;
+}
+.fl-search-btn {
+  background: #A6192E;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(166,25,46,.28);
+}
+.fl-search-btn:hover {
+  background: #8C1526 !important;
+  box-shadow: 0 10px 22px rgba(166,25,46,.36) !important;
+}
+.fl-hero-chip {
+  background: rgba(255,255,255,.75) !important;
+  border-color: rgba(255,255,255,.9) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+@media (max-width: 520px) {
+  .fl-hero-search { border-radius: 28px; }
+  .fl-hero-search-field { flex: 1 1 100%; }
+  .fl-hero .fl-search-btn { width: 100%; }
+}
+@media (min-width: 960px) {
+  .fl-hero-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(440px, 540px);
+    column-gap: 48px;
+    align-items: start;
+  }
+  .fl-hero-badge { grid-column: 1; grid-row: 1; }
+  .fl-hero-title { grid-column: 1; grid-row: 2; }
+  .fl-hero-lead { grid-column: 1; grid-row: 3; }
+  .fl-hero-find {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    align-self: start;
+    justify-self: end;
+    width: 100%;
+    max-width: 540px;
+    margin-top: 0;
+    padding-top: 34px;
+  }
 }
 @media (max-width: 943px) {
   .fl-hero-scrim {
@@ -381,47 +426,47 @@ export default function HomePage() {
         )}
         <div className="fl-hero-scrim" aria-hidden="true" />
         <div className="fl-hero-grid fl-sec" style={{ ...wrap, paddingTop: 80, paddingBottom: 88 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 8, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 14px 6px 8px", fontSize: 13, color: C.ink2, marginBottom: 24, maxWidth: "100%" }}>
+          <div className="fl-hero-stage">
+            <div className="fl-hero-badge" style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 8, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 14px 6px 8px", fontSize: 13, color: C.ink2, marginBottom: 24, maxWidth: "100%", width: "fit-content", justifySelf: "start" }}>
               <span style={{ background: C.goldLight, color: "#7A5F2E", borderRadius: 999, padding: "2px 10px", fontWeight: 600, whiteSpace: "nowrap" }}>台灣在地</span>
               數位遊牧・資深自由工作者・重返職場媽媽
             </div>
-            <h1 className="fl-h1" style={{ margin: 0, fontWeight: 800, color: C.ink }}>
+            <h1 className="fl-h1 fl-hero-title" style={{ margin: 0, fontWeight: 800, color: C.ink }}>
               專業不設限，<br /><span style={{ color: C.forest2 }}>工作有選擇。</span>
             </h1>
-            <p style={{ margin: "22px 0 0", fontSize: 18, lineHeight: 1.8, color: C.ink2, maxWidth: 540 }}>
+            <p className="fl-hero-lead" style={{ margin: "22px 0 0", fontSize: 18, lineHeight: 1.8, color: C.ink2, maxWidth: 540 }}>
               FREELIFE 匯聚經過認證的資深專業人才，以透明定價的標準化服務，陪伴台灣中小企業與新創彈性取得行銷、設計、業務與營運的專業力。
             </p>
-
-            <div className="fl-search" style={{ marginTop: 32, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, boxShadow: "0 18px 40px rgba(31,61,43,.08)" }}>
-              <div style={{ flex: "1 1 200px", display: "flex", alignItems: "center", gap: 10, padding: "0 12px", minWidth: 0 }}>
-                <Icon name="search" color={C.ink3} />
-                <input
-                  className="fl-input"
-                  value={q}
-                  placeholder="想找什麼專業？例如：品牌設計、開發信"
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setQ(e.target.value)}
-                  onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) runSearch(q); }}
-                  style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", fontSize: 16, color: C.ink, padding: "12px 0" }}
-                />
-              </div>
-              <button className="fl-btn fl-primary" style={{ ...btn("primary", true), flex: "0 1 auto", padding: "13px 28px" }} onClick={() => runSearch(q)}>搜尋服務</button>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 18 }}>
-              <span style={{ fontSize: 14, color: C.ink3, marginRight: 4 }}>熱門搜尋：</span>
-              {["品牌設計", "開發信", "新聞稿", "形象網站", "SOP"].map((s: string) => (
-                <button key={s} className="fl-chip" onClick={() => runSearch(s)} style={{ border: `1px solid ${C.line}`, background: "transparent", color: C.ink2, borderRadius: 999, padding: "6px 14px", fontSize: 13 }}>{s}</button>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "20px 40px", marginTop: 44, paddingTop: 28, borderTop: `1px solid ${C.line}` }}>
-              {[["3,200+", "認證專業人才"], ["1,500+", "合作企業"], ["98%", "準時交付率"], ["4.9", "平均合作評價"]].map((m: string[]) => (
-                <div key={m[1]}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: C.forest }}>{m[0]}</div>
-                  <div style={{ fontSize: 14, color: C.ink3 }}>{m[1]}</div>
+            <div className="fl-hero-find">
+              <div className="fl-search fl-hero-search" style={{ background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div className="fl-hero-search-field" style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 12px", minWidth: 0 }}>
+                  <Icon name="search" color={C.ink3} />
+                  <input
+                    className="fl-input"
+                    value={q}
+                    placeholder="想找什麼專業？例如：品牌設計、開發信"
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setQ(e.target.value)}
+                    onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) runSearch(q); }}
+                    style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", fontSize: 16, color: C.ink, padding: "12px 0" }}
+                  />
                 </div>
-              ))}
+                <button className="fl-btn fl-search-btn" style={{ border: "none", borderRadius: 999, padding: "13px 28px", fontSize: 16, fontWeight: 600, display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: 44, whiteSpace: "nowrap", flex: "0 0 auto", color: "#fff" }} onClick={() => runSearch(q)}>搜尋服務</button>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 14 }}>
+                <span style={{ fontSize: 14, color: C.ink3, marginRight: 4 }}>熱門搜尋：</span>
+                {["品牌設計", "開發信", "新聞稿", "形象網站", "SOP"].map((s: string) => (
+                  <button key={s} className="fl-chip fl-hero-chip" onClick={() => runSearch(s)} style={{ border: `1px solid ${C.line}`, color: C.ink2, borderRadius: 999, padding: "6px 14px", fontSize: 13 }}>{s}</button>
+                ))}
+              </div>
             </div>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "20px 40px", marginTop: 44, paddingTop: 28, borderTop: `1px solid ${C.line}` }}>
+            {[["3,200+", "認證專業人才"], ["1,500+", "合作企業"], ["98%", "準時交付率"], ["4.9", "平均合作評價"]].map((m: string[]) => (
+              <div key={m[1]}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: C.forest }}>{m[0]}</div>
+                <div style={{ fontSize: 14, color: C.ink3 }}>{m[1]}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -116,8 +116,11 @@ function renderDocument(job, rendered) {
   const root = `<div id="root" data-prerender="true" data-path="${job.path}">${body}</div>`;
   if (!html.includes('<div id="root"></div>')) fail("Client template is missing an empty #root");
   html = html.replace('<div id="root"></div>', root);
-  // renderToString emits the React prop name; browsers only honor the HTML attribute.
-  html = html.replaceAll("fetchPriority=", "fetchpriority=");
+  // renderToString emits React prop names; browsers only honor the HTML attributes.
+  html = html
+    .replaceAll("fetchPriority=", "fetchpriority=")
+    .replaceAll(" autoPlay=", " autoplay=")
+    .replaceAll(" playsInline=", " playsinline=");
   return html;
 }
 

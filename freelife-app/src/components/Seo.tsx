@@ -87,7 +87,7 @@ export function Seo({
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
-      {preloadImage ? <link rel="preload" as="image" href={preloadImage} /> : null}
+      {preloadImage ? <link rel="preload" as="image" href={preloadImage} fetchPriority="high" /> : null}
       {blocks.map((block, index) => (
         <script
           key={index}

@@ -7,6 +7,51 @@ import { useAuth } from "../lib/auth";
 import { Icon, Leaf, Photo, Stars, initialsOf, SecHead, Pill } from "../components/ui";
 
 
+const HERO_VIDEO = "/media/hero-green-web.mp4";
+const HERO_POSTER = "/media/hero-green-poster.jpg";
+
+const HERO_CSS = `
+.fl-hero { position: relative; isolation: isolate; overflow: hidden; background: #FAF6EE; }
+.fl-hero-media {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  opacity: 0.5; pointer-events: none; z-index: 0;
+}
+.fl-hero-scrim {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(250,246,238,0.92) 0%, rgba(250,246,238,0.10) 100%);
+}
+.fl-hero-grid {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: minmax(0, 1fr); align-items: center;
+}
+@media (min-width: 944px) {
+  .fl-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 56px; }
+}
+@media (max-width: 943px) {
+  .fl-hero-scrim {
+    background: linear-gradient(90deg, rgba(250,246,238,0.94) 0%, rgba(250,246,238,0.78) 42%, rgba(250,246,238,0.34) 100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fl-hero-video { display: none !important; }
+}
+`;
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReduced(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return reduced;
+}
+
 const SAMPLE_TALENT_IMAGES = ["asset:t1.jpg", "asset:t2.jpg", "asset:t3.jpg", "asset:t4.jpg"];
 
 type LiveTalentRow = {
@@ -129,6 +174,8 @@ export default function HomePage() {
   const talentRef = useRef<HTMLDivElement>(null);
   const joinRef = useRef<HTMLDivElement>(null);
   const catsRef = useRef<HTMLDivElement>(null);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const reducedMotion = usePrefersReducedMotion();
   const go = (r: { current: HTMLDivElement | null }): void => { setMenu(false); r.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
   const runSearch = (term: string): void => {
@@ -145,6 +192,13 @@ export default function HomePage() {
 
   const talentSource: Talent[] = liveTalents && liveTalents.length ? liveTalents : SAMPLE_TALENTS;
   const talents = talentSource.filter((t: Talent) => ttype === "全部" || t.type === ttype);
+
+  useEffect(() => {
+    const v = heroVideoRef.current;
+    if (!v || reducedMotion) return;
+    v.muted = true;
+    v.play().catch(() => {});
+  }, [reducedMotion]);
 
   useEffect(() => {
     if (!sb) return;
@@ -298,11 +352,33 @@ export default function HomePage() {
         ) : null}
       </div>
       {/* 2. 主視覺 */}
-      <div style={{ background: `radial-gradient(1200px 500px at 85% 0%, ${C.sageMist} 0%, ${C.ivory} 60%)` }}>
-        <div className="fl-sec" style={{ ...wrap, ...grid(420, 56), alignItems: "center", paddingTop: 80, paddingBottom: 88 }}>
+      <div className="fl-hero">
+        <style>{HERO_CSS}</style>
+        {reducedMotion ? (
+          <img className="fl-hero-media" src={HERO_POSTER} alt="" />
+        ) : (
+          <video
+            className="fl-hero-media fl-hero-video"
+            ref={(node) => {
+              heroVideoRef.current = node;
+              if (node) node.muted = true;
+            }}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            poster={HERO_POSTER}
+            aria-hidden="true"
+          >
+            <source src={HERO_VIDEO} type="video/mp4" />
+          </video>
+        )}
+        <div className="fl-hero-scrim" aria-hidden="true" />
+        <div className="fl-hero-grid fl-sec" style={{ ...wrap, paddingTop: 80, paddingBottom: 88 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 14px 6px 8px", fontSize: 13, color: C.ink2, marginBottom: 24 }}>
-              <span style={{ background: C.goldLight, color: "#7A5F2E", borderRadius: 999, padding: "2px 10px", fontWeight: 600 }}>台灣在地</span>
+            <div style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 8, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: "6px 14px 6px 8px", fontSize: 13, color: C.ink2, marginBottom: 24, maxWidth: "100%" }}>
+              <span style={{ background: C.goldLight, color: "#7A5F2E", borderRadius: 999, padding: "2px 10px", fontWeight: 600, whiteSpace: "nowrap" }}>台灣在地</span>
               數位遊牧・資深自由工作者・重返職場媽媽
             </div>
             <h1 className="fl-h1" style={{ margin: 0, fontWeight: 800, color: C.ink }}>
@@ -340,24 +416,6 @@ export default function HomePage() {
                   <div style={{ fontSize: 14, color: C.ink3 }}>{m[1]}</div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div style={{ position: "relative", minWidth: 0 }}>
-            <div style={{ position: "absolute", inset: "-18px 18px 18px -18px", borderRadius: 32, background: C.sageLight }} />
-            <div style={{ position: "relative" }}>
-              <Photo src="asset:hero.jpg" alt="一位專業人才在明亮的居家空間用筆電遠端工作" height={520} radius={28} />
-            </div>
-            <div style={{ position: "absolute", left: 16, bottom: 20, background: C.white, borderRadius: 18, padding: "14px 18px", boxShadow: "0 16px 36px rgba(31,61,43,.16)", display: "flex", alignItems: "center", gap: 12, maxWidth: "calc(100% - 32px)" }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: C.sageMist, display: "grid", placeItems: "center" }}><Icon name="shield" /></div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>款項由平台安心代管</div>
-                <div style={{ fontSize: 12, color: C.ink3 }}>驗收完成才撥款給人才</div>
-              </div>
-            </div>
-            <div className="fl-hide-sm" style={{ position: "absolute", right: 16, top: 20, background: C.forest, color: C.ivory, borderRadius: 18, padding: "12px 16px", boxShadow: "0 16px 36px rgba(31,61,43,.25)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}><Icon name="star" size={15} color={C.gold} /> 本週新成交</div>
-              <div style={{ fontSize: 22, fontWeight: 800 }}>286 筆合作</div>
             </div>
           </div>
         </div>

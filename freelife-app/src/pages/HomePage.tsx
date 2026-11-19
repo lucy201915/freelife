@@ -5,6 +5,7 @@ import { useBootstrap } from "../lib/bootstrap";
 import { BRAND_WORDMARK, DEFAULT_DESCRIPTION, HERO_ALT, catalogPath } from "../lib/site";
 import { C, fmt, grid, wrap, type IconName } from "../lib/theme";
 import { listPublicTalents, listPublicServices } from "../lib/supabase";
+import { trackEvent } from "../lib/analytics";
 import { useAuth } from "../lib/auth";
 import { Icon, Leaf, Photo, Stars, initialsOf, SecHead, Pill } from "../components/ui";
 
@@ -406,7 +407,7 @@ export default function HomePage() {
             ) : (
               <>
                 <button className="fl-btn fl-ghost fl-hide-sm" style={{ ...btn("ghost"), border: "none" }} onClick={() => openAuth("login")}>登入</button>
-                <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => openAuth("signup", "business")}>免費註冊</button>
+                <button className="fl-btn fl-primary" style={btn("primary")} onClick={() => { trackEvent("sign_up_click"); openAuth("signup", "business"); }}>免費註冊</button>
               </>
             )}
             <button className="fl-btn fl-ghost fl-menu-btn" aria-label="選單" style={{ ...btn("ghost"), padding: 10, border: `1px solid ${C.line}` }} onClick={() => setMenu(!menu)}><Icon name="menu" /></button>
@@ -461,7 +462,7 @@ export default function HomePage() {
               FREELI 匯聚經過認證的資深專業人才，以透明定價的標準化服務，陪伴台灣中小企業與新創彈性取得行銷、設計、業務與營運的專業力。
             </p>
             <div className="fl-hero-find">
-              <form role="search" className="fl-search fl-hero-search" onSubmit={(e: FormEvent<HTMLFormElement>) => { e.preventDefault(); runSearch(q); }} style={{ margin: 0, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <form role="search" className="fl-search fl-hero-search" onSubmit={(e: FormEvent<HTMLFormElement>) => { e.preventDefault(); trackEvent("search", { search_term: q.trim() }); runSearch(q); }} style={{ margin: 0, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                 <div className="fl-hero-search-field" style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 12px", minWidth: 0 }}>
                   <Icon name="search" color={C.ink3} />
                   <label className="fl-sr" htmlFor="home-search">搜尋服務</label>

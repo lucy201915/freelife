@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { PrivateRouteHint } from "./components/Seo";
+import { usePageViews } from "./lib/analytics";
 import { AuthProvider } from "./lib/auth";
 import HomePage from "./pages/HomePage";
 import ServicesPage from "./pages/ServicesPage";
@@ -9,6 +10,7 @@ import FaqPage from "./pages/FaqPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
+  usePageViews();
   return (
     <AuthProvider>
       <PrivateRouteHint />

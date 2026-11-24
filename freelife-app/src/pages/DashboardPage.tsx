@@ -4,24 +4,25 @@ import { Seo } from "../components/Seo";
 import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
 import { BRAND_WORDMARK } from "../lib/site";
 import { C, CATEGORIES, ORDER_STATUS_LABEL, TIER_LABEL, btn, card, fmt, wrap } from "../lib/theme";
-import { publicMediaUrl, rpcMessage, type FlProfile } from "../lib/supabase";
+import { publicMediaUrl, rpcMessage, type BillingPeriod, type FlProfile, type ServiceType } from "../lib/supabase";
+import { SERVICE_TYPE_LABEL, SERVICE_TYPES, serviceTypeOf } from "../lib/service-display";
 import { Field, Pill, Stars } from "../components/ui";
 
 type Tab = "services" | "orders" | "messages" | "reviews" | "favorites" | "invites";
 
-type PkgDraft = { tier: "basic" | "standard" | "premium"; price: string; delivery_days: string; revisions: string; features: string };
+type PkgDraft = { tier: "basic" | "standard" | "premium"; name: string; price: string; delivery_days: string; revisions: string; features: string };
 type FaqDraft = { id?: string; question: string; answer: string };
 type PortDraft = { id?: string; title: string; summary: string; image_path: string };
 type ServiceRow = {
   id: string; slug: string; title: string; category: string; description: string;
-  images: string[]; status: string; availability: boolean;
+  images: string[]; status: string; availability: boolean; service_type?: string;
 };
 
 function emptyPackages(): PkgDraft[] {
   return [
-    { tier: "basic", price: "3000", delivery_days: "5", revisions: "1", features: "需求釐清\n交付摘要" },
-    { tier: "standard", price: "8000", delivery_days: "10", revisions: "2", features: "完整規劃\n兩次修訂\n線上會議" },
-    { tier: "premium", price: "15000", delivery_days: "14", revisions: "3", features: "完整規劃與執行建議\n三次修訂\n追蹤會議" },
+    { tier: "basic", name: "", price: "3000", delivery_days: "5", revisions: "1", features: "需求釐清\n交付摘要" },
+    { tier: "standard", name: "", price: "8000", delivery_days: "10", revisions: "2", features: "完整規劃\n兩次修訂\n線上會議" },
+    { tier: "premium", name: "", price: "15000", delivery_days: "14", revisions: "3", features: "完整規劃與執行建議\n三次修訂\n追蹤會議" },
   ];
 }
 
@@ -37,6 +38,76 @@ function slugify(title: string): string {
 
 function isValidSlug(s: string) {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s) && s.length >= 3 && s.length <= 80;
+}
+
+type Sb = NonNullable<ReturnType<typeof useAuth>["sb"]>;
+
+function featureLines(raw: string): string[] {
+  return raw.split("\n").map((line) => line.trim()).filter(Boolean);
+}
+
+function missingColumn(err: unknown, column: string): boolean {
+  const msg = String((err as { message?: string })?.message || "");
+  return msg.includes(column) && /schema cache|does not exist|column/i.test(msg);
+}
+
+async function writeService(sb: Sb, id: string | null, body: Record<string, unknown>): Promise<string> {
+  if (id) {
+    const { error } = await sb.from("services").update(body).eq("id", id);
+    if (error) throw error;
+    return id;
+  }
+  const { data, error } = await sb.from("services").insert(body).select("id").single();
+  if (error) throw error;
+  return String((data as { id: string }).id);
+}
+
+async function upsertPackage(sb: Sb, row: Record<string, unknown>): Promise<"full" | "legacy"> {
+  const { error } = await sb.from("service_packages").upsert(row, { onConflict: "service_id,tier" });
+  if (!error) return "full";
+  if (row.name !== undefined && (missingColumn(error, "name") || missingColumn(error, "billing_period"))) {
+    const rest: Record<string, unknown> = { ...row };
+    delete rest.name;
+    delete rest.billing_period;
+    const retry = await sb.from("service_packages").upsert(rest, { onConflict: "service_id,tier" });
+    if (retry.error) throw retry.error;
+    return "legacy";
+  }
+  throw error;
+}
+
+function packageRow(serviceId: string, pkg: PkgDraft, billing: BillingPeriod, includeNew: boolean): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    service_id: serviceId,
+    tier: pkg.tier,
+    price: Number(pkg.price),
+    delivery_days: Number(pkg.delivery_days),
+    revisions: Number(pkg.revisions),
+    features: featureLines(pkg.features),
+  };
+  if (includeNew) {
+    row.name = pkg.name.trim();
+    row.billing_period = billing;
+  }
+  return row;
+}
+
+async function writePackages(sb: Sb, serviceId: string, serviceType: ServiceType, packages: PkgDraft[], typeStored: boolean) {
+  if (serviceType === "retainer") {
+    if (!typeStored) throw new Error("資料庫尚未支援月費顧問，這次沒有變更方案。");
+    const basic = packages.find((pkg) => pkg.tier === "basic");
+    if (!basic) throw new Error("請填寫月費方案");
+    const mode = await upsertPackage(sb, packageRow(serviceId, basic, "monthly", typeStored));
+    if (mode === "legacy") {
+      throw new Error("資料庫尚未支援每月計費，這次沒有刪除原有方案。");
+    }
+    const { error } = await sb.from("service_packages").delete().eq("service_id", serviceId).in("tier", ["standard", "premium"]);
+    if (error) throw error;
+    return;
+  }
+  for (const pkg of packages) {
+    await upsertPackage(sb, packageRow(serviceId, pkg, "one_time", typeStored));
+  }
 }
 
 async function uploadMedia(sb: NonNullable<ReturnType<typeof useAuth>["sb"]>, userId: string, file: File): Promise<string> {
@@ -376,8 +447,8 @@ function TalentServices({ profile }: { profile: FlProfile }) {
   const reload = async () => {
     if (!sb) return;
     const { data, error: e } = await sb.from("services").select("*").eq("talent_id", profile.id).order("created_at", { ascending: false });
-    if (e) setError(e.message);
-    else setRows((data || []) as ServiceRow[]);
+    if (e) setError(rpcMessage(e));
+    else setRows(((data || []) as ServiceRow[]).map((row) => ({ ...row, service_type: serviceTypeOf(row.service_type) })));
   };
 
   useEffect(() => { void reload(); }, [sb, profile.id]);
@@ -401,12 +472,12 @@ function TalentServices({ profile }: { profile: FlProfile }) {
       </div>
       {error ? <p style={{ color: "#B4533C" }}>{error}</p> : null}
       {rows === null ? <p style={{ color: C.ink3 }}>載入中…</p> : null}
-      {rows && !rows.length ? <div style={{ ...card, padding: 28, color: C.ink2 }}>還沒有服務。建立一筆含三個方案的服務後，即可出現在市集。</div> : null}
+      {rows && !rows.length ? <div style={{ ...card, padding: 28, color: C.ink2 }}>還沒有服務。建立一筆服務並上架後，就會出現在市集。</div> : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {(rows || []).map((s) => (
           <div key={s.id} style={{ ...card, padding: 20, display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
             <div>
-              <div style={{ fontSize: 13, color: C.forest2 }}>{s.category}・{s.status === "active" ? "已上架" : s.status === "paused" ? "已暫停" : "草稿"}{s.availability ? "" : "・暫停接案"}</div>
+              <div style={{ fontSize: 13, color: C.forest2 }}>{s.category}・{SERVICE_TYPE_LABEL[serviceTypeOf(s.service_type)]}・{s.status === "active" ? "已上架" : s.status === "paused" ? "已暫停" : "草稿"}{s.availability ? "" : "・暫停接案"}</div>
               <div style={{ fontWeight: 700, fontSize: 18, color: C.ink, marginTop: 4 }}>{s.title}</div>
               <div style={{ fontSize: 13, color: C.ink3 }}>/services/{s.slug}</div>
             </div>
@@ -437,12 +508,17 @@ function ServiceEditor({
   const [images, setImages] = useState<string[]>(existing?.images || []);
   const [status, setStatus] = useState(existing?.status || "draft");
   const [availability, setAvailability] = useState(existing?.availability ?? true);
+  const [serviceType, setServiceType] = useState<ServiceType>(serviceTypeOf(existing?.service_type));
   const [packages, setPackages] = useState<PkgDraft[]>(emptyPackages());
   const [faqs, setFaqs] = useState<FaqDraft[]>([{ question: "", answer: "" }]);
   const [ports, setPorts] = useState<PortDraft[]>([{ title: "", summary: "", image_path: "" }]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState("");
+  const [heldNote, setHeldNote] = useState("");
+  const [persistedId, setPersistedId] = useState<string | null>(existing?.id ?? null);
+  const [persistedStatus, setPersistedStatus] = useState(existing?.status || "draft");
+  const [persistedType, setPersistedType] = useState<ServiceType>(serviceTypeOf(existing?.service_type));
 
   useEffect(() => {
     if (!sb || !existing) return;
@@ -455,8 +531,10 @@ function ServiceEditor({
       if (p.data?.length) {
         const by = Object.fromEntries(p.data.map((x: PkgDraft & { features?: string[] }) => [x.tier, x]));
         setPackages(emptyPackages().map((d) => {
-          const row = by[d.tier] as unknown as { price: number; delivery_days: number; revisions: number; features: string[] } | undefined;
-          return row ? { ...d, price: String(row.price), delivery_days: String(row.delivery_days), revisions: String(row.revisions), features: (row.features || []).join("\n") } : d;
+          const row = by[d.tier] as unknown as { name?: string; price: number; delivery_days: number; revisions: number; features: string[] } | undefined;
+          return row
+            ? { ...d, name: String(row.name || ""), price: String(row.price), delivery_days: String(row.delivery_days), revisions: String(row.revisions), features: (row.features || []).join("\n") }
+            : d;
         }));
       }
       if (f.data?.length) setFaqs(f.data.map((x: FaqDraft) => ({ id: x.id, question: x.question, answer: x.answer })));
@@ -469,16 +547,25 @@ function ServiceEditor({
     if (title.trim().length < 4 || title.trim().length > 120) e.title = "標題請介於 4 到 120 字";
     const sl = slug.trim();
     if (!isValidSlug(sl)) e.slug = "網址需為 3–80 字的小寫英文、數字與連字號，例如 brand-audit";
-    if (!category) e.category = "請選擇類別";
+    if (!(CATEGORIES as readonly string[]).includes(category)) e.category = "請選擇有效的服務類別";
     if (description.trim().length < 20) e.description = "請至少撰寫 20 字的服務說明";
-    packages.forEach((p) => {
+    else if (description.trim().length > 5000) e.description = "服務介紹最多 5000 字";
+    if (images.length > 8) e.images = "圖片最多 8 張";
+    const visible = serviceType === "retainer" ? packages.filter((p) => p.tier === "basic") : packages;
+    visible.forEach((p) => {
       const price = Number(p.price);
       const days = Number(p.delivery_days);
       const rev = Number(p.revisions);
+      if (p.name.trim().length > 40) e[`${p.tier}-name`] = "方案名稱最多 40 字";
       if (!Number.isFinite(price) || price < 0) e[`${p.tier}-price`] = "價格需為 0 以上的數字";
+      else if (price > 10000000) e[`${p.tier}-price`] = "價格上限為 NT$10,000,000";
       if (!Number.isInteger(days) || days < 1) e[`${p.tier}-days`] = "交付天數至少 1 天";
+      else if (days > 365) e[`${p.tier}-days`] = "交期最多 365 天";
       if (!Number.isInteger(rev) || rev < 0) e[`${p.tier}-rev`] = "修訂次數需為 0 以上整數";
-      if (!p.features.trim()) e[`${p.tier}-feat`] = "請至少列一項方案內容";
+      else if (rev > 20) e[`${p.tier}-rev`] = "修改次數最多 20 次";
+      const lines = featureLines(p.features);
+      if (!lines.length) e[`${p.tier}-feat`] = "請至少列一項方案內容";
+      else if (lines.length > 12) e[`${p.tier}-feat`] = "方案內容最多 12 條";
     });
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -489,40 +576,46 @@ function ServiceEditor({
     if (!validate()) return;
     setBusy(true);
     setFormError("");
+    setHeldNote("");
+    const wanted = status === "active" || status === "paused" ? status : "draft";
+    const shapeChanged = persistedType !== serviceType;
+    const interim: "draft" | "active" | "paused" =
+      !persistedId || persistedStatus !== "active"
+        ? "draft"
+        : shapeChanged
+          ? "paused"
+          : "active";
+    const body = {
+      talent_id: profile.id,
+      title: title.trim(),
+      slug: slug.trim(),
+      category,
+      description: description.trim(),
+      images,
+      availability,
+      status: interim,
+    };
+    let serviceId = persistedId;
+    let serviceWritten = false;
+    let typeStored = true;
     try {
-      const payload = {
-        talent_id: profile.id,
-        title: title.trim(),
-        slug: slug.trim(),
-        category,
-        description: description.trim(),
-        images,
-        status,
-        availability,
-      };
-      let serviceId = existing?.id;
-      if (existing) {
-        const { error } = await sb.from("services").update(payload).eq("id", existing.id);
-        if (error) throw error;
-      } else {
-        const { data, error } = await sb.from("services").insert(payload).select("id").single();
-        if (error) throw error;
-        serviceId = data.id;
+      try {
+        serviceId = await writeService(sb, serviceId, { ...body, service_type: serviceType });
+      } catch (err) {
+        if (!missingColumn(err, "service_type")) throw err;
+        if (serviceType === "retainer") {
+          throw new Error("資料庫尚未支援月費顧問，這次沒有變更方案。請先選擇標準專案包，或等更新完成後再儲存。");
+        }
+        typeStored = false;
+        serviceId = await writeService(sb, serviceId, body);
       }
       if (!serviceId) throw new Error("無法儲存服務");
+      serviceWritten = true;
+      setPersistedId(serviceId);
+      setPersistedStatus(interim);
+      if (typeStored) setPersistedType(serviceType);
 
-      for (const p of packages) {
-        const row = {
-          service_id: serviceId,
-          tier: p.tier,
-          price: Number(p.price),
-          delivery_days: Number(p.delivery_days),
-          revisions: Number(p.revisions),
-          features: p.features.split("\n").map((s) => s.trim()).filter(Boolean),
-        };
-        const { error } = await sb.from("service_packages").upsert(row, { onConflict: "service_id,tier" });
-        if (error) throw error;
-      }
+      await writePackages(sb, serviceId, serviceType, packages, typeStored);
 
       const { error: delF } = await sb.from("service_faqs").delete().eq("service_id", serviceId);
       if (delF) throw delF;
@@ -543,8 +636,19 @@ function ServiceEditor({
         const { error } = await sb.from("service_portfolios").insert(portRows);
         if (error) throw error;
       }
+
+      if (wanted !== interim) {
+        const { error } = await sb.from("services").update({ status: wanted }).eq("id", serviceId);
+        if (error) throw error;
+        setPersistedStatus(wanted);
+      }
       onSaved();
     } catch (err) {
+      if (serviceWritten && wanted === "active") {
+        setHeldNote(interim === "paused" ? "已改為暫停展示，請修正後再上架" : "已儲存為草稿，請修正後再上架");
+      } else if (serviceWritten && interim === "paused") {
+        setHeldNote("已改為暫停展示，請修正後再儲存");
+      }
       setFormError(rpcMessage(err));
     } finally {
       setBusy(false);
@@ -553,18 +657,52 @@ function ServiceEditor({
 
   const onUpload = async (file: File, kind: "image" | "port", portIdx?: number) => {
     if (!sb) return;
+    if (kind === "image" && images.length >= 8) {
+      setFormError("圖片最多 8 張");
+      return;
+    }
     try {
       const url = await uploadMedia(sb, profile.id, file);
-      if (kind === "image") setImages((prev) => [...prev, url]);
+      if (kind === "image") setImages((prev) => prev.length >= 8 ? prev : [...prev, url]);
       else if (portIdx != null) setPorts((prev) => prev.map((p, i) => i === portIdx ? { ...p, image_path: url } : p));
     } catch (err) {
       setFormError(rpcMessage(err));
     }
   };
 
+  const patchPackage = (idx: number, patch: Partial<PkgDraft>) => {
+    setPackages((prev) => prev.map((row, i) => i === idx ? { ...row, ...patch } : row));
+  };
+
+  const typeMeta = SERVICE_TYPES.find((item) => item.id === serviceType);
+  const retainer = serviceType === "retainer";
+  const visiblePackages = retainer ? packages.filter((pkg) => pkg.tier === "basic") : packages;
+
   return (
     <div style={{ ...card, padding: 28 }}>
       <h2 style={{ fontSize: 22, marginBottom: 18 }}>{existing ? "編輯服務" : "新增服務"}</h2>
+      <fieldset style={{ border: "none", padding: 0, margin: "0 0 18px" }}>
+        <legend style={{ fontSize: 13, fontWeight: 600, color: C.ink2, marginBottom: 8 }}>服務類型 *</legend>
+        <div role="radiogroup" aria-label="服務類型" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {SERVICE_TYPES.map((item) => {
+            const selected = serviceType === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className="fl-chip"
+                onClick={() => setServiceType(item.id)}
+                style={{ border: `1px solid ${selected ? C.forest : C.line}`, background: selected ? C.forest : C.white, color: selected ? C.ivory : C.ink2, borderRadius: 999, padding: "9px 16px", fontSize: 14, fontWeight: 600 }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+        {typeMeta ? <p style={{ margin: "10px 0 0", fontSize: 13, color: C.ink3, lineHeight: 1.6 }}>{typeMeta.hint}</p> : null}
+      </fieldset>
       <Field label="服務標題" value={title} required error={errors.title} onChange={(v) => { setTitle(v); if (!existing && !slug) setSlug(slugify(v)); }} />
       <Field label="網址代稱（slug）" value={slug} required error={errors.slug} placeholder="brand-community-audit" onChange={setSlug} />
       <label style={{ display: "block", marginBottom: 14 }}>
@@ -572,6 +710,7 @@ function ServiceEditor({
         <select value={category} onChange={(e) => setCategory(e.target.value)} style={selectStyle}>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
+        {errors.category ? <div style={{ color: "#B4533C", fontSize: 13, marginTop: 4 }}>{errors.category}</div> : null}
       </label>
       <Field label="服務說明" value={description} required textarea error={errors.description} onChange={setDescription} />
 
@@ -586,6 +725,8 @@ function ServiceEditor({
           ))}
         </div>
         <input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) void onUpload(f, "image"); e.target.value = ""; }} style={{ marginTop: 8 }} />
+        {errors.images ? <div style={{ color: "#B4533C", fontSize: 13, marginTop: 4 }}>{errors.images}</div> : null}
+        <div style={{ fontSize: 13, color: C.ink3, marginTop: 6 }}>最多 8 張。</div>
       </div>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
@@ -603,17 +744,22 @@ function ServiceEditor({
         </label>
       </div>
 
-      <h3 style={{ fontSize: 18, margin: "16px 0 10px" }}>三個方案</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 14 }}>
-        {packages.map((p, idx) => (
-          <div key={p.tier} style={{ border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, background: C.ivory }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>{TIER_LABEL[p.tier]}</div>
-            <Field label="價格（NT$）" value={p.price} required error={errors[`${p.tier}-price`]} onChange={(v) => setPackages(packages.map((x, i) => i === idx ? { ...x, price: v } : x))} />
-            <Field label="交付天數" value={p.delivery_days} required error={errors[`${p.tier}-days`]} onChange={(v) => setPackages(packages.map((x, i) => i === idx ? { ...x, delivery_days: v } : x))} />
-            <Field label="修訂次數" value={p.revisions} required error={errors[`${p.tier}-rev`]} onChange={(v) => setPackages(packages.map((x, i) => i === idx ? { ...x, revisions: v } : x))} />
-            <Field label="方案內容（一行一項）" value={p.features} textarea required error={errors[`${p.tier}-feat`]} onChange={(v) => setPackages(packages.map((x, i) => i === idx ? { ...x, features: v } : x))} />
-          </div>
-        ))}
+      <h3 style={{ fontSize: 18, margin: "16px 0 10px" }}>{retainer ? "月費方案" : "三個方案"}</h3>
+      <div style={{ display: "grid", gridTemplateColumns: retainer ? "minmax(0, 1fr)" : "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 14, maxWidth: retainer ? 560 : undefined }}>
+        {visiblePackages.map((p) => {
+          const idx = packages.findIndex((row) => row.tier === p.tier);
+          return (
+            <div key={p.tier} style={{ border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, background: C.ivory }}>
+              {retainer ? null : <div style={{ fontWeight: 700, marginBottom: 8 }}>{TIER_LABEL[p.tier]}</div>}
+              <Field label="方案名稱（選填）" value={p.name} placeholder={retainer ? "例如：每月顧問" : "例如：入門健檢"} error={errors[`${p.tier}-name`]} onChange={(v) => patchPackage(idx, { name: v })} />
+              <Field label={retainer ? "每月價格（NT$）" : "價格（NT$）"} value={p.price} required suffix={retainer ? "/月" : undefined} error={errors[`${p.tier}-price`]} onChange={(v) => patchPackage(idx, { price: v })} />
+              <Field label={retainer ? "每月交付天數" : "交付天數"} value={p.delivery_days} required error={errors[`${p.tier}-days`]} onChange={(v) => patchPackage(idx, { delivery_days: v })} />
+              {retainer ? <div style={{ fontSize: 13, color: C.ink3, marginTop: -8, marginBottom: 12 }}>也可當作每月的回應週期。</div> : null}
+              <Field label={retainer ? "每月修改次數" : "修訂次數"} value={p.revisions} required error={errors[`${p.tier}-rev`]} onChange={(v) => patchPackage(idx, { revisions: v })} />
+              <Field label={retainer ? "每月包含內容（一行一項）" : "方案內容（一行一項）"} value={p.features} textarea required error={errors[`${p.tier}-feat`]} onChange={(v) => patchPackage(idx, { features: v })} />
+            </div>
+          );
+        })}
       </div>
 
       <h3 style={{ fontSize: 18, margin: "22px 0 10px" }}>常見問題</h3>
@@ -638,7 +784,8 @@ function ServiceEditor({
       ))}
       <button type="button" className="fl-btn fl-ghost" style={{ ...btn("ghost"), marginBottom: 18 }} onClick={() => setPorts([...ports, { title: "", summary: "", image_path: "" }])}>新增作品</button>
 
-      {formError ? <div style={{ color: "#B4533C", marginBottom: 12 }}>{formError}</div> : null}
+      {formError ? <div role="alert" style={{ color: "#B4533C", marginBottom: 8 }}>{formError}</div> : null}
+      {heldNote ? <div role="status" style={{ color: C.forest, background: C.sageMist, borderRadius: 12, padding: "10px 14px", marginBottom: 12 }}>{heldNote}</div> : null}
       <div style={{ display: "flex", gap: 8 }}>
         <button className="fl-btn fl-primary" disabled={busy} style={btn("primary", true)} onClick={() => void save()}>{busy ? "儲存中…" : "儲存服務"}</button>
         <button className="fl-btn fl-ghost" style={btn("ghost")} onClick={onCancel}>取消</button>

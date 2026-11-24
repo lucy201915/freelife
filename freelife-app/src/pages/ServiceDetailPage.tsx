@@ -5,8 +5,9 @@ import { Seo, breadcrumbJsonLd, faqPageJsonLd, graph, organizationJsonLd, servic
 import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
 import { useBootstrap } from "../lib/bootstrap";
 import { BRAND_WORDMARK, absoluteUrl, catalogPath, summarize } from "../lib/site";
-import { C, TIER_LABEL, btn, card, fmt, wrap } from "../lib/theme";
+import { C, TIER_LABEL, btn, card, wrap } from "../lib/theme";
 import { getPublicServicePage, publicMediaUrl, rpcMessage, startPayment, type ServicePackage, type ServicePage } from "../lib/supabase";
+import { SERVICE_TYPE_LABEL, billingOf, formatPlanPrice, formatStartingPrice, serviceTypeOf } from "../lib/service-display";
 import { Icon, Image, Photo, Stars, initialsOf } from "../components/ui";
 
 export default function ServiceDetailPage() {
@@ -107,6 +108,9 @@ export default function ServiceDetailPage() {
 
   const images = page?.service.images?.length ? page.service.images : [];
   const skills = Array.isArray(page?.talent.skills) ? (page!.talent.skills as string[]) : [];
+  const serviceType = serviceTypeOf(page?.service.service_type);
+  const isRetainer = serviceType === "retainer";
+  const monthlyPlan = isRetainer || billingOf(pkg?.billing_period) === "monthly";
 
   const requireBusiness = (action: () => void) => {
     if (!profile) {
@@ -219,31 +223,38 @@ export default function ServiceDetailPage() {
     );
   }
 
+  const orderLabel = !page.service.availability ? "目前暫停接案" : isRetainer ? "預約月費顧問" : "立即合作";
   const PackageCard = ({ desktopCta }: { desktopCta?: boolean }) => (
     <div className="fl-pkg-col" style={{ ...card, padding: 22, position: "sticky", top: 96 }}>
-      <div style={{ display: "flex", gap: 6, background: C.ivory2, borderRadius: 999, padding: 4, marginBottom: 18 }}>
-        {(["basic", "standard", "premium"] as const).map((t) => {
-          const exists = page.packages.some((p) => p.tier === t);
-          return (
-            <button key={t} disabled={!exists} className="fl-btn" onClick={() => exists && setTier(t)} style={{ flex: 1, border: "none", borderRadius: 999, padding: "9px 0", fontSize: 13, fontWeight: 700, background: tier === t ? C.forest : "transparent", color: tier === t ? C.ivory : exists ? C.ink2 : C.ink3, minHeight: 40, opacity: exists ? 1 : 0.45 }}>
-              {TIER_LABEL[t]}
-            </button>
-          );
-        })}
-      </div>
+      {isRetainer ? (
+        <div style={{ fontWeight: 700, color: C.ink, marginBottom: 12 }}>月費方案</div>
+      ) : (
+        <div style={{ display: "flex", gap: 6, background: C.ivory2, borderRadius: 999, padding: 4, marginBottom: 18 }}>
+          {(["basic", "standard", "premium"] as const).map((t) => {
+            const exists = page.packages.some((p) => p.tier === t);
+            return (
+              <button key={t} disabled={!exists} className="fl-btn" onClick={() => exists && setTier(t)} style={{ flex: 1, border: "none", borderRadius: 999, padding: "9px 0", fontSize: 13, fontWeight: 700, background: tier === t ? C.forest : "transparent", color: tier === t ? C.ivory : exists ? C.ink2 : C.ink3, minHeight: 40, opacity: exists ? 1 : 0.45 }}>
+                {TIER_LABEL[t]}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {pkg ? (
         <>
-          <div style={{ fontSize: 32, fontWeight: 800, color: C.forest }}>{fmt(pkg.price)}</div>
+          {!isRetainer ? <div style={{ fontWeight: 700, color: C.ink, marginBottom: 4 }}>{TIER_LABEL[pkg.tier]}</div> : null}
+          {pkg.name ? <div style={{ fontSize: 14, color: C.ink2, marginBottom: 8 }}>{pkg.name}</div> : null}
+          <div style={{ fontSize: 32, fontWeight: 800, color: C.forest }}>{formatPlanPrice(pkg.price, monthlyPlan ? "monthly" : "one_time")}</div>
           <div style={{ display: "flex", gap: 16, margin: "12px 0 18px", color: C.ink2, fontSize: 14 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name="clock" size={16} />{pkg.delivery_days} 天交付</span>
-            <span>修訂 {pkg.revisions} 次</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name="clock" size={16} />{isRetainer ? `每月 ${pkg.delivery_days} 天交付` : `${pkg.delivery_days} 天交付`}</span>
+            <span>{isRetainer ? `每月修訂 ${pkg.revisions} 次` : `修訂 ${pkg.revisions} 次`}</span>
           </div>
           <ul style={{ margin: "0 0 18px", padding: "0 0 0 18px", color: C.ink2, fontSize: 14, lineHeight: 1.8 }}>
             {(pkg.features || []).map((f) => <li key={f}>{f}</li>)}
           </ul>
           <div className={desktopCta ? "fl-desktop-cta" : undefined} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <button className="fl-btn fl-primary" style={{ ...btn("primary", true), width: "100%" }} disabled={!page.service.availability} onClick={() => requireBusiness(() => { setFormError(""); setOrderStep("form"); setOrderOpen(true); })}>
-              {page.service.availability ? "立即合作" : "目前暫停接案"}
+              {orderLabel}
             </button>
             <button className="fl-btn fl-ghost" style={{ ...btn("ghost", true), width: "100%" }} onClick={() => requireBusiness(() => { setFormError(""); setContactOpen(true); })}>聯絡人才</button>
           </div>
@@ -268,6 +279,10 @@ export default function ServiceDetailPage() {
 
         <div className="fl-gig" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.65fr) minmax(280px, 0.9fr)", gap: 36, alignItems: "start" }}>
           <div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+              <span className="fl-type-pill">{SERVICE_TYPE_LABEL[serviceType]}</span>
+              <span style={{ fontSize: 13, color: C.ink2, alignSelf: "center" }}>{page.service.category}</span>
+            </div>
             <h1 style={{ fontSize: "clamp(26px, 3vw, 36px)", fontWeight: 800, color: C.ink, lineHeight: 1.3, marginBottom: 18 }}>{page.service.title}</h1>
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 22, flexWrap: "wrap" }}>
               <div style={{ width: 48, height: 48, borderRadius: 999, overflow: "hidden", background: C.forest, color: C.ivory, display: "grid", placeItems: "center", fontWeight: 700 }}>
@@ -303,11 +318,13 @@ export default function ServiceDetailPage() {
             </Section>
 
             {pkg ? (
-              <Section title="這個方案包含">
+              <Section title={isRetainer ? "每月包含" : "這個方案包含"}>
+                {!isRetainer && pkg.name ? <div style={{ fontWeight: 700, color: C.ink, marginBottom: 8 }}>{TIER_LABEL[pkg.tier]}・{pkg.name}</div> : null}
+                {isRetainer && pkg.name ? <div style={{ fontWeight: 700, color: C.ink, marginBottom: 8 }}>{pkg.name}</div> : null}
                 <ul style={{ margin: 0, paddingLeft: 18, color: C.ink2, lineHeight: 1.9 }}>
                   {(pkg.features || []).map((f) => <li key={f}>{f}</li>)}
                 </ul>
-                <div style={{ marginTop: 10, color: C.ink3, fontSize: 14 }}>{pkg.delivery_days} 天交付・可修訂 {pkg.revisions} 次</div>
+                <div style={{ marginTop: 10, color: C.ink3, fontSize: 14 }}>{isRetainer ? `每月 ${pkg.delivery_days} 天交付・每月可修訂 ${pkg.revisions} 次` : `${pkg.delivery_days} 天交付・可修訂 ${pkg.revisions} 次`}</div>
               </Section>
             ) : null}
 
@@ -379,10 +396,13 @@ export default function ServiceDetailPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: 14 }}>
                   {page.related.map((r) => (
                     <Link key={r.slug} to={`/services/${r.slug}`} style={{ ...card, padding: 16, textDecoration: "none" }}>
-                      <div style={{ fontSize: 12, color: C.forest2, fontWeight: 600 }}>{r.category}</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        <span className="fl-type-pill">{SERVICE_TYPE_LABEL[serviceTypeOf(r.service_type)]}</span>
+                        <span style={{ fontSize: 12, color: C.forest2, fontWeight: 600 }}>{r.category}</span>
+                      </div>
                       <div style={{ fontWeight: 700, color: C.ink, margin: "6px 0" }}>{r.title}</div>
                       <div style={{ fontSize: 13, color: C.ink2 }}>{r.talent_name}</div>
-                      <div style={{ marginTop: 8, fontWeight: 700, color: C.forest }}>{r.basic_price != null ? `${fmt(r.basic_price)} 起` : "查看方案"}</div>
+                      <div style={{ marginTop: 8, fontWeight: 700, color: C.forest }}>{formatStartingPrice(r.basic_price, r.price_period)}</div>
                     </Link>
                   ))}
                 </div>
@@ -396,12 +416,12 @@ export default function ServiceDetailPage() {
 
       <div className="fl-mobile-cta" style={{ display: "none", position: "fixed", left: 0, right: 0, bottom: 0, background: "rgba(253,252,250,.96)", borderTop: `1px solid ${C.line}`, padding: "10px 16px calc(10px + env(safe-area-inset-bottom))", zIndex: 50, gap: 10, alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontSize: 12, color: C.ink3 }}>{pkg ? TIER_LABEL[pkg.tier] : ""}{pkg ? `・${pkg.delivery_days} 天` : ""}</div>
-          <div style={{ fontWeight: 800, color: C.forest, fontSize: 18 }}>{pkg ? fmt(pkg.price) : ""}</div>
+          <div style={{ fontSize: 12, color: C.ink3 }}>{pkg ? (isRetainer ? "月費方案" : TIER_LABEL[pkg.tier]) : ""}{pkg ? `・${pkg.delivery_days} 天` : ""}</div>
+          <div style={{ fontWeight: 800, color: C.forest, fontSize: 18 }}>{pkg ? formatPlanPrice(pkg.price, monthlyPlan ? "monthly" : "one_time") : ""}</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="fl-btn fl-ghost" style={btn("ghost")} onClick={() => requireBusiness(() => { setFormError(""); setContactOpen(true); })}>聯絡</button>
-          <button className="fl-btn fl-primary" style={btn("primary")} disabled={!page.service.availability} onClick={() => requireBusiness(() => { setFormError(""); setOrderStep("form"); setOrderOpen(true); })}>立即合作</button>
+          <button className="fl-btn fl-primary" style={btn("primary")} disabled={!page.service.availability} onClick={() => requireBusiness(() => { setFormError(""); setOrderStep("form"); setOrderOpen(true); })}>{isRetainer && page.service.availability ? "預約" : "立即合作"}</button>
         </div>
       </div>
 
@@ -410,7 +430,7 @@ export default function ServiceDetailPage() {
           {orderStep === "form" ? (
             <>
               <h3 style={{ fontSize: 22, marginBottom: 8 }}>確認合作方案</h3>
-              <p style={{ color: C.ink2, marginBottom: 16 }}>{page.service.title}・{pkg ? `${TIER_LABEL[pkg.tier]} ${fmt(pkg.price)}` : ""}。價格由系統依方案寫入，無法在前端改價。</p>
+              <p style={{ color: C.ink2, marginBottom: 16 }}>{page.service.title}・{pkg ? `${isRetainer ? "月費方案" : TIER_LABEL[pkg.tier]}${pkg.name ? ` ${pkg.name}` : ""} ${formatPlanPrice(pkg.price, monthlyPlan ? "monthly" : "one_time")}` : ""}。價格由系統依方案寫入，無法在前端改價。</p>
               <label style={{ display: "block" }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.ink2, marginBottom: 6 }}>合作簡述 *</div>
                 <textarea className="fl-input" value={brief} onChange={(e) => setBrief(e.target.value)} rows={5} style={areaStyle} placeholder="請說明目標、時程與既有資料" />

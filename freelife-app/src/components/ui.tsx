@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { C, type IconName } from "../lib/theme";
 
 export function Image({
@@ -11,6 +11,7 @@ export function Image({
   loading = "lazy",
   decoding = "async",
   fetchPriority,
+  onError,
   ...rest
 }: {
   src: string;
@@ -22,6 +23,7 @@ export function Image({
   loading?: "lazy" | "eager";
   decoding?: "async" | "auto" | "sync";
   fetchPriority?: "high" | "low" | "auto";
+  onError?: () => void;
   [key: string]: unknown;
 }) {
   const resolved =
@@ -34,6 +36,7 @@ export function Image({
       loading={loading}
       decoding={decoding}
       {...(fetchPriority ? { fetchPriority } : {})}
+      onError={onError}
       width={typeof width === "number" ? width : undefined}
       height={typeof height === "number" ? height : undefined}
       style={{
@@ -83,23 +86,69 @@ export function Leaf({ size = 30 }: { size?: number }) {
   );
 }
 
+function AvatarFallback({ alt, height, initials }: { alt: string; height: number; initials?: string }) {
+  const label = (initials || "").trim();
+  const badge = Math.min(112, Math.max(40, Math.round(height * 0.38)));
+  return (
+    <div
+      role="img"
+      aria-label={alt}
+      style={{
+        height,
+        width: "100%",
+        display: "grid",
+        placeItems: "center",
+        background: `linear-gradient(165deg, ${C.forest} 0%, ${C.forest2} 100%)`,
+      }}
+    >
+      {label ? (
+        <span
+          style={{
+            width: badge,
+            height: badge,
+            borderRadius: 999,
+            display: "grid",
+            placeItems: "center",
+            background: C.ivory,
+            color: C.forest,
+            fontWeight: 800,
+            fontSize: Math.max(15, Math.round(badge * 0.34)),
+            letterSpacing: "0.02em",
+            boxShadow: "0 0 0 6px rgba(201,213,188,.45)",
+          }}
+        >
+          {label}
+        </span>
+      ) : (
+        <svg width={badge} height={badge} viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" fill={C.ivory} />
+          <circle cx="32" cy="26" r="10" fill={C.forest} />
+          <path d="M14 54c2.8-10 10.2-15 18-15s15.2 5 18 15" fill={C.forest} />
+        </svg>
+      )}
+    </div>
+  );
+}
+
 export function Photo({ src, alt, height, radius = 20, initials, priority = false }: { src: string; alt: string; height: number; radius?: number; initials?: string; priority?: boolean }) {
+  const photo = src.trim();
+  const [failedSrc, setFailedSrc] = useState("");
+  const broken = Boolean(photo) && failedSrc === photo;
   return (
     <div style={{ borderRadius: radius, overflow: "hidden", background: C.sageMist, lineHeight: 0, position: "relative" }}>
-      {src ? (
+      {photo && !broken ? (
         <Image
-          src={src}
+          src={photo}
           alt={alt}
           fit="cover"
           height={height}
           loading={priority ? "eager" : "lazy"}
           decoding={priority ? "auto" : "async"}
           fetchPriority={priority ? "high" : undefined}
+          onError={() => setFailedSrc(photo)}
         />
       ) : (
-        <div role="img" aria-label={alt} style={{ height, width: "100%", display: "grid", placeItems: "center", background: C.forest, color: C.ivory, fontWeight: 700, fontSize: Math.max(18, Math.round(height / 5)) }}>
-          {initials || ""}
-        </div>
+        <AvatarFallback alt={alt} height={height} initials={initials} />
       )}
     </div>
   );

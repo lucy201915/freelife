@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo, breadcrumbJsonLd, graph, organizationJsonLd, professionalServiceJsonLd, serviceItemListJsonLd, websiteJsonLd } from "../components/Seo";
@@ -18,14 +18,18 @@ export default function ServicesPage() {
   const [rows, setRows] = useState<PublicService[] | null>(boot.services ?? null);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
+  const filterSynced = useRef(false);
 
-  useEffect(() => {
-    const q0 = params.get("q") || "";
+  useLayoutEffect(() => {
+    const q0 = (params.get("q") || "").trim();
     const cat0 = params.get("category") || "";
+    const nextCat = cat0 === "全部" ? "" : cat0;
     setQ(q0);
-    setCategory(cat0 === "全部" ? "" : cat0);
+    setCategory(nextCat);
     setAppliedQ(q0);
     setReady(true);
+    if (!filterSynced.current && (q0 || nextCat)) setRows(null);
+    filterSynced.current = true;
   }, [params]);
 
   useEffect(() => {

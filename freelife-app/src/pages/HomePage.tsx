@@ -1,10 +1,10 @@
 import { useState, useRef, useMemo, useEffect, type ChangeEvent, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Seo, graph, organizationJsonLd, professionalServiceJsonLd, websiteJsonLd } from "../components/Seo";
 import { useBootstrap } from "../lib/bootstrap";
-import { BRAND_WORDMARK, DEFAULT_DESCRIPTION, HERO_ALT, catalogPath } from "../lib/site";
+import { BRAND_WORDMARK, DEFAULT_DESCRIPTION, HERO_ALT, catalogPath, summarize } from "../lib/site";
 import { C, fmt, grid, wrap, type IconName } from "../lib/theme";
-import { listPublicTalents, listPublicServices } from "../lib/supabase";
+import { listPublicTalents, listPublicServices, type PublicService, type PublicTalent } from "../lib/supabase";
 import { trackEvent } from "../lib/analytics";
 import { useAuth } from "../lib/auth";
 import { Icon, Leaf, Photo, Stars, initialsOf, SecHead, Pill } from "../components/ui";
@@ -100,7 +100,13 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-const SAMPLE_TALENT_IMAGES = ["asset:t1.jpg", "asset:t2.jpg", "asset:t3.jpg", "asset:t4.jpg"];
+const FEATURED_TALENT_ORDER = ["吳沛慈", "林可恩", "陳子謙", "張書維"];
+const FEATURED_TALENT_PHOTOS: Record<string, string> = {
+  吳沛慈: "asset:t1.jpg",
+  林可恩: "asset:t2.jpg",
+  陳子謙: "asset:t3.jpg",
+  張書維: "asset:t4.jpg",
+};
 
 type LiveTalentRow = {
   name: string;
@@ -116,12 +122,13 @@ type LiveTalentRow = {
   id?: string;
 };
 
-function mapLiveTalent(row: any, _index: number): LiveTalentRow {
+function mapLiveTalent(row: PublicTalent): LiveTalentRow {
   const skills = Array.isArray(row.skills) ? row.skills.map(String) : [];
   const from = Number(row.project_min) > 0 ? Number(row.project_min) : (Number(row.hourly_min) || 0);
+  const name = String(row.name || "專業人才");
   return {
     id: String(row.id || ""),
-    name: String(row.name || "專業人才"),
+    name,
     title: String(row.headline || "專業顧問"),
     years: 0,
     type: "專業人才",
@@ -129,25 +136,23 @@ function mapLiveTalent(row: any, _index: number): LiveTalentRow {
     rating: 0,
     reviews: 0,
     from,
-    img: "",
+    img: FEATURED_TALENT_PHOTOS[name] || "",
     city: String(row.location || ""),
   };
 }
 
-const FEATURED_TALENT_ORDER = ["吳沛慈", "林可恩", "陳子謙", "張書維"];
-
 async function fetchLiveTalents(): Promise<LiveTalentRow[]> {
   const rows = await listPublicTalents();
-  const usable = (rows as any[]).filter((r) => r?.name);
+  const usable = rows.filter((r) => r?.name);
   if (!usable.length) throw new Error("public talents empty");
-  const preferred = FEATURED_TALENT_ORDER
-    .map((name) => usable.find((r) => r.name === name))
-    .filter(Boolean);
-  const featured = (preferred.length ? preferred : usable).slice(0, 4);
-  return featured.map((row, i) => ({
-    ...mapLiveTalent(row, i),
-    img: SAMPLE_TALENT_IMAGES[i] || "",
-  }));
+  const rank = new Map(FEATURED_TALENT_ORDER.map((name, index) => [name, index]));
+  const ordered = [...usable].sort((a, b) => {
+    const ar = rank.has(String(a.name)) ? (rank.get(String(a.name)) as number) : FEATURED_TALENT_ORDER.length;
+    const br = rank.has(String(b.name)) ? (rank.get(String(b.name)) as number) : FEATURED_TALENT_ORDER.length;
+    if (ar !== br) return ar - br;
+    return String(a.name).localeCompare(String(b.name), "zh-Hant");
+  });
+  return ordered.map((row) => mapLiveTalent(row));
 }
 
 type Cat = { name: string; desc: string; count: string; icon: IconName };
@@ -169,18 +174,6 @@ const TALENTS: Talent[] = [
   { name: "林哲宇", title: "全端工程師・網站架構", years: 8, type: "數位遊牧", skills: ["網站開發", "電商串接"], rating: 4.9, reviews: 86, from: 8000, img: "asset:t2.jpg", city: "清邁／台中" },
   { name: "王雅琳", title: "營運管理與流程顧問", years: 15, type: "資深自由工作者", skills: ["營運流程", "專案管理"], rating: 4.8, reviews: 104, from: 5000, img: "asset:t3.jpg", city: "新竹" },
   { name: "張凱婷", title: "品牌視覺設計師", years: 10, type: "數位遊牧", skills: ["品牌識別", "包裝設計"], rating: 5.0, reviews: 67, from: 6500, img: "asset:t4.jpg", city: "峇里島／台北" },
-];
-
-type Service = { id: number; title: string; cat: string; seller: string; badge: string; items: string[]; days: number; price: number; rating: number; reviews: number; popular?: boolean };
-const SERVICES: Service[] = [
-  { id: 1, title: "品牌社群經營健檢・90 分鐘策略諮詢", cat: "行銷公關", seller: "陳思妤", badge: "輕量入門", items: ["現有社群帳號診斷報告", "3 個月內容方向建議", "諮詢錄影與重點整理"], days: 3, price: 3600, rating: 4.9, reviews: 128, popular: true },
-  { id: 2, title: "新創品牌識別設計包", cat: "品牌設計", seller: "張凱婷", badge: "完整專案", items: ["Logo 主視覺 2 款提案", "色彩與字體規範", "名片與社群模板"], days: 10, price: 18000, rating: 5.0, reviews: 41 },
-  { id: 3, title: "B2B 開發信與潛在客戶名單建置", cat: "B2B 業務開發", seller: "周家豪", badge: "完整專案", items: ["目標產業名單 200 筆", "3 封開發信模板", "追蹤節奏與話術"], days: 7, price: 12000, rating: 4.8, reviews: 53, popular: true },
-  { id: 4, title: "一頁式品牌形象網站建置", cat: "網站與數位開發", seller: "林哲宇", badge: "完整專案", items: ["RWD 響應式一頁網站", "基礎 SEO 與 GA4 設定", "上線後 14 天修改保固"], days: 14, price: 22000, rating: 4.9, reviews: 37 },
-  { id: 5, title: "營運 SOP 流程優化專案", cat: "營運流程優化", seller: "王雅琳", badge: "完整專案", items: ["現況流程訪談與盤點", "5 項核心 SOP 文件", "團隊導入工作坊 1 場"], days: 10, price: 15000, rating: 4.8, reviews: 49 },
-  { id: 6, title: "新聞稿撰寫與媒體發佈", cat: "內容與文案", seller: "陳思妤", badge: "輕量入門", items: ["新聞稿 1 篇（800 字）", "30 家媒體名單發佈", "露出成效回報"], days: 5, price: 6800, rating: 4.9, reviews: 72 },
-  { id: 7, title: "GA4 數據追蹤與營運儀表板", cat: "數據分析", seller: "許文彥", badge: "完整專案", items: ["轉換事件追蹤設定", "Looker Studio 儀表板", "30 分鐘解讀教學"], days: 7, price: 9800, rating: 4.7, reviews: 28 },
-  { id: 8, title: "商業合約健檢・單份審閱", cat: "財務法務", seller: "蔡佳穎", badge: "輕量入門", items: ["合約風險條款標註", "修改建議與替代文字", "30 分鐘線上說明"], days: 3, price: 4500, rating: 4.9, reviews: 33 },
 ];
 
 const STORIES = [
@@ -213,17 +206,18 @@ const WHY: { icon: IconName; t: string; d: string }[] = [
 
 export default function HomePage() {
   const boot = useBootstrap();
+  const navigate = useNavigate();
+  const bootServices = boot.services ?? null;
   const [q, setQ] = useState<string>("");
-  const [applied, setApplied] = useState<string>("");
   const [cat, setCat] = useState<string>("全部");
   const [ttype, setTtype] = useState<"全部" | TalentType>("全部");
   const [flow, setFlow] = useState<"biz" | "talent">("biz");
-  const [booked] = useState<number[]>([]);
   const [saved, setSaved] = useState<string[]>([]);
   const { sb, profile, setNotice, openAuth, handleSignOut, openRequest, setSavedTalentNames } = useAuth();
   const [menu, setMenu] = useState<boolean>(false);
   const [liveTalents, setLiveTalents] = useState<Talent[] | null>(null);
-  const [serviceSlugs, setServiceSlugs] = useState<Record<string, string>>(boot.serviceSlugs ?? {});
+  const [liveServices, setLiveServices] = useState<PublicService[] | null>(bootServices);
+  const [servicesState, setServicesState] = useState<"loading" | "ready" | "error">(bootServices ? "ready" : "loading");
 
   const servicesRef = useRef<HTMLDivElement>(null);
   const talentRef = useRef<HTMLDivElement>(null);
@@ -234,16 +228,20 @@ export default function HomePage() {
   const go = (r: { current: HTMLDivElement | null }): void => { setMenu(false); r.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
   const runSearch = (term: string): void => {
-    setQ(term);
-    setApplied(term.trim());
-    setCat("全部");
-    go(servicesRef);
+    const keyword = term.trim();
+    setQ(keyword);
+    if (!keyword) {
+      navigate("/services");
+      return;
+    }
+    navigate(`/services?q=${encodeURIComponent(keyword)}`);
   };
 
-  const shown = useMemo<Service[]>(() => {
-    const t = applied.toLowerCase();
-    return SERVICES.filter((s: Service) => (cat === "全部" || s.cat === cat) && (!t || (s.title + s.cat + s.seller + s.items.join("")).toLowerCase().includes(t)));
-  }, [applied, cat]);
+  const shown = useMemo<PublicService[]>(() => {
+    const rows = (liveServices ?? []).filter((s) => s.slug);
+    if (cat === "全部") return rows;
+    return rows.filter((s) => s.category === cat);
+  }, [liveServices, cat]);
 
   const talentSource: Talent[] = liveTalents && liveTalents.length ? liveTalents : TALENTS;
   const talents = talentSource.filter((t: Talent) => ttype === "全部" || t.type === ttype);
@@ -279,15 +277,15 @@ export default function HomePage() {
       try {
         const rows = await listPublicServices();
         if (cancelled) return;
-        const map: Record<string, string> = {};
-        for (const r of rows) map[r.title] = r.slug;
-        setServiceSlugs(map);
+        setLiveServices(rows);
+        setServicesState("ready");
       } catch (err) {
         console.warn("[FREELI] public services unavailable", err);
+        if (!cancelled && bootServices == null) setServicesState("error");
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [bootServices]);
 
   useEffect(() => {
     if (!sb || !profile) return;
@@ -532,7 +530,7 @@ export default function HomePage() {
         <SecHead eyebrow="熱門服務分類" title="從 0 到 1 最需要的專業，都在這裡" sub="點選分類，立即查看該領域的標準化服務與透明報價。" />
         <div style={grid(250, 18)}>
           {CATS.map((c: Cat) => (
-            <div key={c.name} className="fl-tile" onClick={() => { setCat(serviceTabs.includes(c.name) ? c.name : "全部"); setApplied(serviceTabs.includes(c.name) ? "" : c.name); setQ(serviceTabs.includes(c.name) ? "" : c.name); go(servicesRef); }} style={{ background: C.ivory2, border: `1px solid ${C.line}`, borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div key={c.name} className="fl-tile" onClick={() => { setCat(c.name); go(servicesRef); }} style={{ background: C.ivory2, border: `1px solid ${C.line}`, borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", gap: 14 }}>
               <div className="fl-tile-ic" style={{ width: 48, height: 48, borderRadius: 14, background: C.sage, display: "grid", placeItems: "center", transition: "background .2s ease" }}>
                 <Icon name={c.icon} color={C.ivory} size={24} />
               </div>
@@ -561,11 +559,12 @@ export default function HomePage() {
               </div>
             }
           />
+          {talents.length ? (
           <div style={grid(250, 22)}>
             {talents.map((t: Talent) => {
               const isSaved = saved.includes(t.name);
               return (
-                <div key={t.name} className="fl-card" style={card}>
+                <div key={t.id || t.name} className="fl-card" style={card}>
                   <div style={{ position: "relative", padding: 10 }}>
                     <Photo src={t.img} alt={`${t.name}的專業形象照`} height={260} radius={16} initials={initialsOf(t.name)} />
                     <span style={{ position: "absolute", top: 22, left: 22, background: "rgba(255,253,249,.94)", color: C.forest, borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>{t.type}</span>
@@ -592,6 +591,12 @@ export default function HomePage() {
               );
             })}
           </div>
+          ) : (
+            <div style={{ ...card, padding: 32, textAlign: "center", color: C.ink2 }}>
+              這個類型目前沒有可顯示的人才。
+              <button type="button" className="fl-link" style={{ border: "none", background: "transparent", color: C.forest2, fontWeight: 700 }} onClick={() => setTtype("全部")}>查看全部</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -601,53 +606,53 @@ export default function HomePage() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
           {serviceTabs.map((t: string) => <Pill key={t} active={cat === t} onClick={() => setCat(t)}>{t}</Pill>)}
         </div>
-        {applied ? (
+        {cat !== "全部" ? (
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 20, fontSize: 15, color: C.ink2 }}>
-            搜尋「<b style={{ color: C.forest }}>{applied}</b>」：找到 {shown.length} 項服務
-            <span className="fl-link" style={{ color: C.forest2, fontWeight: 600 }} onClick={() => { setApplied(""); setQ(""); }}>清除搜尋</span>
+            分類「<b style={{ color: C.forest }}>{cat}</b>」：{servicesState === "ready" ? `${shown.length} 項服務` : "載入中"}
+            <button type="button" className="fl-link" style={{ border: "none", background: "transparent", color: C.forest2, fontWeight: 600 }} onClick={() => setCat("全部")}>顯示全部</button>
           </div>
         ) : null}
-        {shown.length > 0 ? (
+        {servicesState === "loading" ? (
+          <div style={{ ...card, padding: 32, textAlign: "center", color: C.ink2 }}>正在載入服務…</div>
+        ) : servicesState === "error" ? (
+          <div style={{ ...card, padding: 32, textAlign: "center", color: "#B4533C" }}>服務暫時無法載入，請稍後再試。</div>
+        ) : liveServices && liveServices.length === 0 ? (
+          <div style={{ ...card, padding: 32, textAlign: "center", color: C.ink2 }}>
+            目前沒有上架中的服務。<Link to="/services" style={{ color: C.forest2, fontWeight: 700 }}>前往服務市集</Link>
+          </div>
+        ) : shown.length > 0 ? (
           <div style={grid(330, 22)}>
-            {shown.map((s: Service) => {
-              const done = booked.includes(s.id);
-              return (
-                <div key={s.id} className="fl-card" style={{ ...card, padding: 26, display: "flex", flexDirection: "column" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: C.forest2, background: C.sageMist, borderRadius: 999, padding: "4px 12px" }}>{s.cat}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: s.popular ? "#7A5F2E" : C.ink3, background: s.popular ? C.goldLight : "transparent", borderRadius: 999, padding: "4px 10px" }}>{s.popular ? "熱銷服務" : s.badge}</span>
-                  </div>
-                  <h3 style={{ margin: "16px 0 6px", fontSize: 19, lineHeight: 1.45, color: C.ink }}>{s.title}</h3>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 14, color: C.ink2 }}>
-                    <span>由 <b style={{ color: C.ink, fontWeight: 600 }}>{s.seller}</b> 提供</span>
-                    <Stars value={s.rating} reviews={s.reviews} />
-                  </div>
-                  <div style={{ marginTop: 18, padding: 16, background: C.ivory, borderRadius: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.ink3 }}>交付內容</div>
-                    {s.items.map((it: string) => (
-                      <div key={it} style={{ display: "flex", gap: 8, fontSize: 14, color: C.ink2 }}><Icon name="check" size={18} color={C.forest2} />{it}</div>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: "auto", paddingTop: 20 }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.ink3 }}><Icon name="clock" size={16} color={C.ink3} />{s.days} 個工作天交付</div>
-                      <div style={{ fontSize: 26, fontWeight: 800, color: C.forest, lineHeight: 1.3 }}>{fmt(s.price)}<span style={{ fontSize: 13, fontWeight: 500, color: C.ink3 }}> 固定價</span></div>
-                    </div>
-                    {serviceSlugs[s.title] ? (
-                      <Link to={`/services/${serviceSlugs[s.title]}`} className="fl-btn fl-primary" style={{ ...btn("primary"), textDecoration: "none" }}>查看方案</Link>
-                    ) : (
-                      <button className={done ? "fl-btn fl-ghost" : "fl-btn fl-primary"} style={done ? btn("ghost") : btn("primary")} onClick={() => openRequest({ title: s.title, tags: s.cat })}>
-                        {done ? "✓ 已送出預約" : "立即預約"}
-                      </button>
-                    )}
-                  </div>
+            {shown.map((s: PublicService) => (
+              <div key={s.id} className="fl-card" style={{ ...card, padding: 26, display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.forest2, background: C.sageMist, borderRadius: 999, padding: "4px 12px" }}>{s.category}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: C.ink3 }}>{s.availability ? "可接案" : "暫停接案"}</span>
                 </div>
-              );
-            })}
+                <h3 style={{ margin: "16px 0 6px", fontSize: 19, lineHeight: 1.45, color: C.ink }}>{s.title}</h3>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 14, color: C.ink2 }}>
+                  <span>由 <b style={{ color: C.ink, fontWeight: 600 }}>{s.talent_name}</b> 提供</span>
+                  {s.review_count > 0 ? <Stars value={s.avg_rating} reviews={s.review_count} /> : <span style={{ fontSize: 13, color: C.ink3 }}>尚無評價</span>}
+                </div>
+                <div style={{ marginTop: 18, padding: 16, background: C.ivory, borderRadius: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink3 }}>服務簡介</div>
+                  <div style={{ fontSize: 14, color: C.ink2, marginTop: 8, lineHeight: 1.7 }}>{summarize(s.description || "到方案頁查看交付內容、天數與固定價格。", 96)}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: "auto", paddingTop: 20 }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: C.ink3 }}>{s.talent_location || "可遠端合作"}</div>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: C.forest, lineHeight: 1.3 }}>
+                      {s.basic_price != null ? <>{fmt(s.basic_price)}<span style={{ fontSize: 13, fontWeight: 500, color: C.ink3 }}> 起</span></> : <span style={{ fontSize: 18 }}>查看方案</span>}
+                    </div>
+                  </div>
+                  <Link to={`/services/${s.slug}`} className="fl-btn fl-primary" style={{ ...btn("primary"), textDecoration: "none" }}>查看方案</Link>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div style={{ ...card, padding: 32, textAlign: "center", color: C.ink2 }}>
-            目前沒有完全符合的服務包。<span className="fl-link" style={{ color: C.forest2, fontWeight: 700 }} onClick={() => openRequest({ title: "顧問配對需求" })}>30 秒留下需求，由顧問為你配對 →</span>
+            這個分類目前沒有上架中的服務。
+            <button type="button" className="fl-link" style={{ border: "none", background: "transparent", color: C.forest2, fontWeight: 700 }} onClick={() => setCat("全部")}>查看全部服務</button>
           </div>
         )}
         <div style={{ marginTop: 28, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "20px 26px", borderRadius: 18, border: `1px dashed ${C.sage}`, background: C.white }}>

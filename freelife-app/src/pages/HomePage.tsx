@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect, type ChangeEvent, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
+import { useState, useRef, useMemo, useEffect, type ChangeEvent, type CSSProperties, type FormEvent, type KeyboardEvent, type RefObject } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Seo, graph, organizationJsonLd, professionalServiceJsonLd, websiteJsonLd } from "../components/Seo";
 import { useBootstrap } from "../lib/bootstrap";
@@ -15,7 +15,7 @@ const HERO_VIDEO = "/media/hero-green-web.mp4";
 const HERO_POSTER = "/media/hero-green-poster.jpg";
 
 const HERO_CSS = `
-.fl-hero { position: relative; isolation: isolate; overflow: hidden; background: #FAF6EE; }
+.fl-hero { position: relative; isolation: isolate; overflow: hidden; background: #FDFCFA; }
 .fl-hero-media {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: center;
@@ -23,7 +23,7 @@ const HERO_CSS = `
 }
 .fl-hero-scrim {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: linear-gradient(90deg, rgba(250,246,238,0.92) 0%, rgba(250,246,238,0.10) 100%);
+  background: linear-gradient(90deg, rgba(253,252,250,0.92) 0%, rgba(253,252,250,0.10) 100%);
 }
 .fl-hero-grid { position: relative; z-index: 2; }
 .fl-hero-stage { display: flex; flex-direction: column; }
@@ -34,16 +34,16 @@ const HERO_CSS = `
 }
 .fl-hero-search-field { flex: 1 1 180px; min-width: 0; }
 .fl-hero .fl-hero-search:focus-within {
-  box-shadow: 0 0 0 3px rgba(166,25,46,.16), 0 18px 44px rgba(31,58,45,.16) !important;
+  box-shadow: 0 0 0 3px rgba(46,106,76,.18), 0 18px 44px rgba(46,106,76,.16) !important;
 }
 .fl-search-btn {
-  background: #A6192E;
+  background: #2E6A4C;
   color: #fff;
-  box-shadow: 0 8px 18px rgba(166,25,46,.28);
+  box-shadow: 0 8px 18px rgba(46,106,76,.28);
 }
 .fl-search-btn:hover {
-  background: #8C1526 !important;
-  box-shadow: 0 10px 22px rgba(166,25,46,.36) !important;
+  background: #255E44 !important;
+  box-shadow: 0 10px 22px rgba(37,94,68,.34) !important;
 }
 .fl-hero-chip {
   background: rgba(255,255,255,.75) !important;
@@ -79,7 +79,7 @@ const HERO_CSS = `
 }
 @media (max-width: 943px) {
   .fl-hero-scrim {
-    background: linear-gradient(90deg, rgba(250,246,238,0.94) 0%, rgba(250,246,238,0.78) 42%, rgba(250,246,238,0.34) 100%);
+    background: linear-gradient(90deg, rgba(253,252,250,0.94) 0%, rgba(253,252,250,0.78) 42%, rgba(253,252,250,0.34) 100%);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -102,6 +102,38 @@ function usePrefersReducedMotion(): boolean {
 }
 
 const FEATURED_TALENT_ORDER = ["吳沛慈", "林可恩", "陳子謙", "張書維"];
+const LIFESTYLE_TYPES = ["數位遊牧", "重返職場媽媽", "資深自由工作者"] as const;
+type TalentType = (typeof LIFESTYLE_TYPES)[number];
+
+function lifestyleFromText(parts: Array<string | null | undefined>): TalentType | null {
+  const haystack = parts.filter(Boolean).join("\n");
+  return LIFESTYLE_TYPES.find((type) => haystack.includes(type)) ?? null;
+}
+
+function useColumnCount(ref: RefObject<HTMLDivElement | null>, min: number, gap: number, watch: number): number {
+  const [cols, setCols] = useState(4);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const width = el.clientWidth;
+      if (width <= 0) return;
+      setCols(Math.max(1, Math.floor((width + gap) / (min + gap))));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, min, gap, watch]);
+  return cols;
+}
+
+function fullRowCount(total: number, columns: number): number {
+  if (total <= 0) return 0;
+  if (columns <= 1 || total <= columns) return total;
+  const rows = Math.min(2, Math.floor(total / columns));
+  return rows * columns;
+}
 
 type LiveTalentRow = {
   name: string;
@@ -126,7 +158,12 @@ function mapLiveTalent(row: PublicTalent): LiveTalentRow {
     name,
     title: String(row.headline || "專業顧問"),
     years: 0,
-    type: "專業人才",
+    type: lifestyleFromText([
+      String(row.headline || ""),
+      String(row.bio || ""),
+      String(row.languages || ""),
+      ...skills,
+    ]) || "專業人才",
     skills,
     rating: 0,
     reviews: 0,
@@ -162,7 +199,6 @@ const CATS: Cat[] = [
   { name: "數據分析", desc: "GA4 追蹤、儀表板、市場研究", count: "190+ 位人才", icon: "chart" },
 ];
 
-type TalentType = "數位遊牧" | "重返職場媽媽" | "資深自由工作者";
 type Talent = { name: string; title: string; years: number; type: TalentType | "專業人才"; skills: string[]; rating: number; reviews: number; from: number; img: string; city: string; id?: string };
 const TALENTS: Talent[] = [
   { name: "陳思妤", title: "品牌行銷與公關顧問", years: 12, type: "重返職場媽媽", skills: ["行銷公關", "社群策略"], rating: 4.9, reviews: 128, from: 3600, img: "asset:t1.jpg", city: "台北" },
@@ -206,6 +242,7 @@ export default function HomePage() {
   const [q, setQ] = useState<string>("");
   const [cat, setCat] = useState<string>("全部");
   const [ttype, setTtype] = useState<"全部" | TalentType>("全部");
+  const [talentExpanded, setTalentExpanded] = useState(false);
   const [flow, setFlow] = useState<"biz" | "talent">("biz");
   const [saved, setSaved] = useState<string[]>([]);
   const { sb, profile, setNotice, openAuth, handleSignOut, openRequest, setSavedTalentNames } = useAuth();
@@ -216,6 +253,7 @@ export default function HomePage() {
 
   const servicesRef = useRef<HTMLDivElement>(null);
   const talentRef = useRef<HTMLDivElement>(null);
+  const talentGridRef = useRef<HTMLDivElement>(null);
   const joinRef = useRef<HTMLDivElement>(null);
   const catsRef = useRef<HTMLDivElement>(null);
   const heroVideoRef = useRef<HTMLVideoElement>(null);
@@ -239,7 +277,13 @@ export default function HomePage() {
   }, [liveServices, cat]);
 
   const talentSource: Talent[] = liveTalents && liveTalents.length ? liveTalents : TALENTS;
-  const talents = talentSource.filter((t: Talent) => ttype === "全部" || t.type === ttype);
+  const lifestyleOptions = LIFESTYLE_TYPES.filter((type) => talentSource.some((t) => t.type === type));
+  const activeType: "全部" | TalentType = ttype !== "全部" && lifestyleOptions.includes(ttype) ? ttype : "全部";
+  const talents = talentSource.filter((t: Talent) => activeType === "全部" || t.type === activeType);
+  const talentCols = useColumnCount(talentGridRef, 250, 22, talents.length);
+  const talentPageSize = fullRowCount(talents.length, talentCols);
+  const visibleTalents = talentExpanded ? talents : talents.slice(0, talentPageSize);
+  const canToggleTalents = talents.length > talentPageSize;
 
   useEffect(() => {
     const v = heroVideoRef.current;
@@ -382,7 +426,7 @@ export default function HomePage() {
       />
 
       {/* 1. 導覽列 */}
-      <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(250,246,238,.96)" }}>
+      <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(253,252,250,.96)" }}>
         <nav aria-label="主要" style={{ ...wrap, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, minHeight: 76, flexWrap: "wrap" }}>
           <Link to="/" aria-label="Freeli 首頁" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <Leaf />
@@ -494,22 +538,22 @@ export default function HomePage() {
       <div ref={joinRef} id="join" className="fl-sec" style={{ ...wrap, paddingTop: 88, paddingBottom: 40, scrollMarginTop: 24 }}>
         <div style={grid(440, 24)}>
           {[
-            { k: "talent", tag: "我是專業人才", title: "把你的專業，變成可以被預約的服務", pts: ["AI 協助包裝履歷與服務包", "自訂價格與每週接案時數", "在任何城市都能穩定接案"], cta: "成為 FREELI 人才", img: "asset:cta-talent.jpg", alt: "一位自由工作者在咖啡館用筆電工作", dark: true },
-            { k: "biz", tag: "我是企業雇主", title: "不必養一個部門，也能擁有資深專業", pts: ["10 年以上資歷人才嚴選認證", "固定報價、交付物清楚列明", "驗收後付款，未交付全額退款"], cta: "開始尋找人才", img: "asset:cta-biz.jpg", alt: "企業主與顧問在會議中討論合作", dark: false },
-          ].map((c: { k: string; tag: string; title: string; pts: string[]; cta: string; img: string; alt: string; dark: boolean }) => (
-            <div key={c.k} className="fl-card" style={{ ...card, background: c.dark ? C.forest : C.ivory2, border: c.dark ? "none" : `1px solid ${C.line}`, display: "flex", flexWrap: "wrap" }}>
+            { k: "talent", tag: "我是專業人才", title: "把你的專業，變成可以被預約的服務", pts: ["AI 協助包裝履歷與服務包", "自訂價格與每週接案時數", "在任何城市都能穩定接案"], cta: "成為 FREELI 人才", img: "asset:cta-talent.jpg", alt: "一位自由工作者在咖啡館用筆電工作", sage: true },
+            { k: "biz", tag: "我是企業雇主", title: "不必養一個部門，也能擁有資深專業", pts: ["10 年以上資歷人才嚴選認證", "固定報價、交付物清楚列明", "驗收後付款，未交付全額退款"], cta: "開始尋找人才", img: "asset:cta-biz.jpg", alt: "企業主與顧問在會議中討論合作", sage: false },
+          ].map((c: { k: string; tag: string; title: string; pts: string[]; cta: string; img: string; alt: string; sage: boolean }) => (
+            <div key={c.k} className="fl-card" style={{ ...card, background: c.sage ? "linear-gradient(165deg, #FDFCFA 0%, #EEF3E6 100%)" : C.ivory2, border: `1px solid ${c.sage ? "#D4E0CC" : C.line}`, boxShadow: "0 10px 28px rgba(90, 70, 40, .04)", display: "flex", flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 260px", padding: 36, minWidth: 0, display: "flex", flexDirection: "column" }}>
-                <span style={{ alignSelf: "flex-start", background: c.dark ? "rgba(201,213,188,.18)" : C.white, color: c.dark ? C.sageLight : C.forest, borderRadius: 999, padding: "5px 14px", fontSize: 14, fontWeight: 700 }}>{c.tag}</span>
-                <h3 style={{ margin: "18px 0 16px", fontSize: 24, lineHeight: 1.4, color: c.dark ? C.ivory : C.ink }}>{c.title}</h3>
+                <span style={{ alignSelf: "flex-start", background: C.white, color: C.forest, borderRadius: 999, padding: "5px 14px", fontSize: 14, fontWeight: 700 }}>{c.tag}</span>
+                <h3 style={{ margin: "18px 0 16px", fontSize: 24, lineHeight: 1.4, color: C.ink }}>{c.title}</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
                   {c.pts.map((p: string) => (
-                    <div key={p} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 15, color: c.dark ? C.sageLight : C.ink2 }}>
-                      <Icon name="check" size={20} color={c.dark ? C.sage : C.forest2} />{p}
+                    <div key={p} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 15, color: C.ink2 }}>
+                      <Icon name="check" size={20} color={C.forest2} />{p}
                     </div>
                   ))}
                 </div>
-                <button className={c.dark ? "fl-btn fl-light" : "fl-btn fl-primary"} style={{ ...btn(c.dark ? "light" : "primary", true), alignSelf: "flex-start", marginTop: "auto" }} onClick={() => (c.dark ? openAuth("signup", "talent") : openRequest())}>
-                  {c.cta} <Icon name="arrow" size={18} color={c.dark ? C.forest : C.ivory} />
+                <button className="fl-btn fl-primary" style={{ ...btn("primary", true), alignSelf: "flex-start", marginTop: "auto" }} onClick={() => (c.sage ? openAuth("signup", "talent") : openRequest())}>
+                  {c.cta} <Icon name="arrow" size={18} color={C.ivory} />
                 </button>
               </div>
               <div style={{ flex: "1 1 200px", minWidth: 0, padding: 12 }}>
@@ -547,21 +591,23 @@ export default function HomePage() {
             title="資歷經過認證，合作更有底氣"
             sub="每位人才的年資、作品與評價都公開透明，找到真正懂你產業的夥伴。"
             right={
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {(["全部", "數位遊牧", "重返職場媽媽", "資深自由工作者"] as const).map((t: "全部" | TalentType) => (
-                  <Pill key={t} active={ttype === t} onClick={() => setTtype(t)}>{t}</Pill>
-                ))}
-              </div>
+              lifestyleOptions.length ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {(["全部", ...lifestyleOptions] as const).map((t: "全部" | TalentType) => (
+                    <Pill key={t} active={activeType === t} onClick={() => { setTtype(t); setTalentExpanded(false); }}>{t}</Pill>
+                  ))}
+                </div>
+              ) : null
             }
           />
           {talents.length ? (
-          <div style={grid(250, 22)}>
-            {talents.map((t: Talent) => {
+          <div ref={talentGridRef} style={grid(250, 22)}>
+            {visibleTalents.map((t: Talent) => {
               const isSaved = saved.includes(t.name);
               return (
                 <div key={t.id || t.name} className="fl-card" style={card}>
                   <div style={{ position: "relative", padding: 10 }}>
-                    <Photo src={t.img} alt={`${t.name}的專業形象照`} height={260} radius={16} initials={initialsOf(t.name)} />
+                    <Photo src={t.img} alt={`${t.name}的專業形象照`} height={260} radius={16} initials={initialsOf(t.name)} priority={Boolean(t.img)} />
                     <span style={{ position: "absolute", top: 22, left: 22, background: "rgba(255,253,249,.94)", color: C.forest, borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>{t.type}</span>
                     <button className="fl-btn" aria-label="收藏" onClick={() => toggleFavorite(t)} style={{ position: "absolute", top: 18, right: 18, width: 38, height: 38, borderRadius: 999, border: "none", background: "rgba(255,253,249,.94)", color: isSaved ? "#B4533C" : C.ink3, fontSize: 18, display: "grid", placeItems: "center" }}>{isSaved ? "♥" : "♡"}</button>
                   </div>
@@ -592,6 +638,19 @@ export default function HomePage() {
               <button type="button" className="fl-link" style={{ border: "none", background: "transparent", color: C.forest2, fontWeight: 700 }} onClick={() => setTtype("全部")}>查看全部</button>
             </div>
           )}
+          {canToggleTalents ? (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 28 }}>
+              <button
+                type="button"
+                className="fl-btn fl-ghost"
+                style={btn("ghost")}
+                aria-expanded={talentExpanded}
+                onClick={() => setTalentExpanded((open) => !open)}
+              >
+                {talentExpanded ? "收合" : `展開全部人才（共 ${talents.length} 位）`}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -657,16 +716,16 @@ export default function HomePage() {
       </div>
 
       {/* 7. 為什麼選擇我們 */}
-      <div style={{ background: C.forest, color: C.ivory }}>
+      <div style={{ background: "linear-gradient(180deg, #FDFCFA 0%, #EEF3E6 55%, #F6F3EC 100%)", color: C.ink }}>
         <div className="fl-sec" style={{ ...wrap, paddingTop: 88, paddingBottom: 88 }}>
-          <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.sageLight, fontWeight: 600, marginBottom: 12 }}>為什麼選擇 FREELI</div>
-          <h2 className="fl-h2" style={{ margin: "0 0 44px", color: C.ivory, fontWeight: 700, maxWidth: 640 }}>讓每一次合作，都安心、透明又有彈性</h2>
+          <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600, marginBottom: 12 }}>為什麼選擇 FREELI</div>
+          <h2 className="fl-h2" style={{ margin: "0 0 44px", color: C.ink, fontWeight: 700, maxWidth: 640 }}>讓每一次合作，都安心、透明又有彈性</h2>
           <div style={grid(240, 20)}>
             {WHY.map((w: { icon: IconName; t: string; d: string }) => (
-              <div key={w.t} style={{ background: "rgba(250,246,238,.06)", border: "1px solid rgba(201,213,188,.22)", borderRadius: 20, padding: 26 }}>
-                <div style={{ width: 52, height: 52, borderRadius: 16, background: C.sageLight, display: "grid", placeItems: "center", marginBottom: 18 }}><Icon name={w.icon} size={26} color={C.forest} /></div>
-                <h3 style={{ margin: 0, fontSize: 19, fontWeight: 700, color: C.ivory }}>{w.t}</h3>
-                <div style={{ fontSize: 15, color: C.sageLight, marginTop: 8, lineHeight: 1.75 }}>{w.d}</div>
+              <div key={w.t} style={{ background: C.white, border: `1px solid ${C.line}`, borderRadius: 20, padding: 26 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 16, background: C.sageMist, display: "grid", placeItems: "center", marginBottom: 18 }}><Icon name={w.icon} size={26} color={C.forest} /></div>
+                <h3 style={{ margin: 0, fontSize: 19, fontWeight: 700, color: C.ink }}>{w.t}</h3>
+                <div style={{ fontSize: 15, color: C.ink2, marginTop: 8, lineHeight: 1.75 }}>{w.d}</div>
               </div>
             ))}
           </div>
@@ -685,7 +744,7 @@ export default function HomePage() {
               </div>
               <div style={{ fontSize: 16, lineHeight: 1.85, color: C.ink, flex: 1 }}>「{s.quote}」</div>
               <div style={{ display: "flex", alignItems: "center", gap: 14, paddingTop: 18, borderTop: `1px solid ${C.line}` }}>
-                <div style={{ width: 56, flexShrink: 0 }}><Photo src={s.img} alt={`${s.name}的照片`} height={56} radius={999} /></div>
+                <div style={{ width: 56, flexShrink: 0 }}><Photo src={s.img} alt={`${s.name}的照片`} height={56} radius={999} initials={initialsOf(s.name)} priority /></div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>{s.name}・{s.role}</div>
                   <div style={{ fontSize: 13, color: C.ink3 }}>{s.company}</div>

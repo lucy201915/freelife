@@ -394,7 +394,7 @@ export default function ServiceDetailPage() {
         </div>
       </main>
 
-      <div className="fl-mobile-cta" style={{ display: "none", position: "fixed", left: 0, right: 0, bottom: 0, background: "rgba(250,246,238,.96)", borderTop: `1px solid ${C.line}`, padding: "10px 16px calc(10px + env(safe-area-inset-bottom))", zIndex: 50, gap: 10, alignItems: "center", justifyContent: "space-between" }}>
+      <div className="fl-mobile-cta" style={{ display: "none", position: "fixed", left: 0, right: 0, bottom: 0, background: "rgba(253,252,250,.96)", borderTop: `1px solid ${C.line}`, padding: "10px 16px calc(10px + env(safe-area-inset-bottom))", zIndex: 50, gap: 10, alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 12, color: C.ink3 }}>{pkg ? TIER_LABEL[pkg.tier] : ""}{pkg ? `・${pkg.delivery_days} 天` : ""}</div>
           <div style={{ fontWeight: 800, color: C.forest, fontSize: 18 }}>{pkg ? fmt(pkg.price) : ""}</div>

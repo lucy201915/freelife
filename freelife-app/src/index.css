@@ -10,7 +10,8 @@ a { color: inherit; }
   margin: 0 auto;
   padding: 40px 24px 88px;
 }
-.fl-market-cats {
+.fl-market-cats,
+.fl-market-types {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -117,10 +118,35 @@ a { color: inherit; }
   font-size: 24px;
   box-shadow: 0 0 0 6px rgba(201, 213, 188, .45);
 }
+.fl-type-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid #2E6A4C;
+  background: #F2F6EC;
+  color: #2E6A4C;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.fl-svc-demo-note {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #76827A;
+}
 .fl-svc-cat,
+.fl-svc-type,
 .fl-svc-heart {
   position: absolute;
   z-index: 2;
+}
+.fl-svc-type {
+  top: 10px;
+  left: 10px;
+  max-width: calc(100% - 64px);
 }
 .fl-svc-cat {
   pointer-events: none;
@@ -303,6 +329,11 @@ a { color: inherit; }
     scrollbar-width: none;
   }
   .fl-market-cats::-webkit-scrollbar { display: none; }
+  .fl-market-types {
+    flex-wrap: wrap;
+    overflow: visible;
+    margin-bottom: 10px;
+  }
   .fl-market-tools {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -337,3 +368,132 @@ a { color: inherit; }
     justify-self: start;
   }
 }
+
+.fl-wizard-steps {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin: 0 0 20px;
+  padding-bottom: 2px;
+}
+.fl-wizard-steps::-webkit-scrollbar { display: none; }
+@media (max-width: 520px) {
+  .fl-wizard-steps { flex-wrap: wrap; overflow: visible; }
+}
+.fl-wizard-step {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #E4DDCE;
+  background: #FFFFFF;
+  color: #4A574E;
+  border-radius: 999px;
+  padding: 8px 12px 8px 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fl-wizard-step[aria-current="step"] {
+  background: #2E6A4C;
+  border-color: #2E6A4C;
+  color: #FDFCFA;
+}
+.fl-wizard-step.is-done {
+  background: #F2F6EC;
+  border-color: #9CAF88;
+  color: #2E6A4C;
+}
+.fl-wizard-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #F2F6EC;
+  color: #2E6A4C;
+  font-size: 12px;
+}
+.fl-wizard-step[aria-current="step"] .fl-wizard-num {
+  background: #FDFCFA;
+  color: #2E6A4C;
+}
+.fl-price-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px 8px;
+}
+.fl-price-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 8px;
+  min-width: 680px;
+}
+.fl-price-table.is-retainer { min-width: 0; }
+.fl-price-table th {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4A574E;
+  vertical-align: top;
+  padding-top: 14px;
+  white-space: nowrap;
+}
+.fl-price-table thead th { padding-top: 0; color: #1C2620; font-size: 15px; }
+.fl-price-table td {
+  vertical-align: top;
+  background: #FDFCFA;
+  border: 1px solid #E4DDCE;
+  border-radius: 14px;
+  padding: 8px;
+  min-width: 168px;
+}
+.fl-price-table.is-retainer td { min-width: 0; }
+.fl-tier-tag { display: none; }
+@media (max-width: 720px) {
+  .fl-price-scroll { overflow: visible; }
+  .fl-price-table, .fl-price-table.is-retainer { min-width: 0; display: block; }
+  .fl-price-table thead { display: none; }
+  .fl-price-table tbody, .fl-price-table tr { display: block; }
+  .fl-price-table tr { margin-bottom: 14px; }
+  .fl-price-table th[scope="row"] { display: block; padding: 0 0 6px; }
+  .fl-price-table td { display: block; min-width: 0; margin-bottom: 8px; }
+  .fl-tier-tag { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 800; color: #2E6A4C; }
+}
+.fl-mini {
+  width: 100%;
+  border: 1px solid #E4DDCE;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 16px;
+  color: #1C2620;
+  background: #FFFFFF;
+}
+.fl-mini:focus { outline: 2px solid #C9D5BC; border-color: #2E6A4C; }
+.fl-wizard-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(253,252,250,0), #FDFCFA 28%);
+}
+.fl-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #FFFFFF;
+  border: 1px solid #E4DDCE;
+}
+.fl-check.is-ok { background: #F2F6EC; border-color: #C9D5BC; }
+.fl-check.is-miss { background: #F8EBE6; border-color: #E7C7BC; }

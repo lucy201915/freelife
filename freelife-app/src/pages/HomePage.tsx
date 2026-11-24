@@ -5,6 +5,8 @@ import { useBootstrap } from "../lib/bootstrap";
 import { BRAND_WORDMARK, DEFAULT_DESCRIPTION, HERO_ALT, catalogPath, summarize } from "../lib/site";
 import { C, fmt, grid, wrap, type IconName } from "../lib/theme";
 import { listPublicTalents, listPublicServices, type PublicService, type PublicTalent } from "../lib/supabase";
+import { DEMO_SERVICES } from "../lib/demo-services";
+import { SERVICE_TYPE_LABEL, serviceTypeOf } from "../lib/service-display";
 import { FEATURED_TALENT_PHOTOS } from "../lib/talent-photos";
 import { trackEvent } from "../lib/analytics";
 import { useAuth } from "../lib/auth";
@@ -248,8 +250,9 @@ export default function HomePage() {
   const { sb, profile, setNotice, openAuth, handleSignOut, openRequest, setSavedTalentNames } = useAuth();
   const [menu, setMenu] = useState<boolean>(false);
   const [liveTalents, setLiveTalents] = useState<Talent[] | null>(null);
-  const [liveServices, setLiveServices] = useState<PublicService[] | null>(bootServices);
-  const [servicesState, setServicesState] = useState<"loading" | "ready" | "error">(bootServices ? "ready" : "loading");
+  const bootHasLive = Boolean(bootServices && bootServices.length);
+  const [liveServices, setLiveServices] = useState<PublicService[] | null>(bootHasLive ? bootServices! : bootServices ? DEMO_SERVICES : null);
+  const [servicesState, setServicesState] = useState<"loading" | "ready" | "demo">(bootHasLive ? "ready" : bootServices ? "demo" : "loading");
 
   const servicesRef = useRef<HTMLDivElement>(null);
   const talentRef = useRef<HTMLDivElement>(null);
@@ -316,11 +319,23 @@ export default function HomePage() {
       try {
         const rows = await listPublicServices();
         if (cancelled) return;
-        setLiveServices(rows);
-        setServicesState("ready");
+        if (rows.length === 0) {
+          setLiveServices(DEMO_SERVICES);
+          setServicesState("demo");
+        } else {
+          setLiveServices(rows);
+          setServicesState("ready");
+        }
       } catch (err) {
         console.warn("[FREELI] public services unavailable", err);
-        if (!cancelled && bootServices == null) setServicesState("error");
+        if (cancelled) return;
+        if (bootServices && bootServices.length) {
+          setLiveServices(bootServices);
+          setServicesState("ready");
+          return;
+        }
+        setLiveServices(DEMO_SERVICES);
+        setServicesState("demo");
       }
     })();
     return () => { cancelled = true; };
@@ -662,47 +677,50 @@ export default function HomePage() {
         </div>
         {cat !== "全部" ? (
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 20, fontSize: 15, color: C.ink2 }}>
-            分類「<b style={{ color: C.forest }}>{cat}</b>」：{servicesState === "ready" ? `${shown.length} 項服務` : "載入中"}
+            分類「<b style={{ color: C.forest }}>{cat}</b>」：{servicesState === "loading" ? "載入中" : `${shown.length} 項服務`}
             <button type="button" className="fl-link" style={{ border: "none", background: "transparent", color: C.forest2, fontWeight: 600 }} onClick={() => setCat("全部")}>顯示全部</button>
           </div>
         ) : null}
+        {servicesState === "demo" ? <p className="fl-svc-demo-note">目前顯示示範服務</p> : null}
         {servicesState === "loading" ? (
           <div style={{ ...card, padding: 32, textAlign: "center", color: C.ink2 }}>正在載入服務…</div>
-        ) : servicesState === "error" ? (
-          <div style={{ ...card, padding: 32, textAlign: "center", color: "#B4533C" }}>服務暫時無法載入，請稍後再試。</div>
-        ) : liveServices && liveServices.length === 0 ? (
-          <div style={{ ...card, padding: 32, textAlign: "center", color: C.ink2 }}>
-            目前沒有上架中的服務。<Link to="/services" style={{ color: C.forest2, fontWeight: 700 }}>前往服務市集</Link>
-          </div>
         ) : shown.length > 0 ? (
-          <div style={grid(330, 22)}>
-            {shown.map((s: PublicService) => (
-              <div key={s.id} className="fl-card" style={{ ...card, padding: 26, display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: C.forest2, background: C.sageMist, borderRadius: 999, padding: "4px 12px" }}>{s.category}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: C.ink3 }}>{s.availability ? "可接案" : "暫停接案"}</span>
-                </div>
-                <h3 style={{ margin: "16px 0 6px", fontSize: 19, lineHeight: 1.45, color: C.ink }}>{s.title}</h3>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 14, color: C.ink2 }}>
-                  <span>由 <b style={{ color: C.ink, fontWeight: 600 }}>{s.talent_name}</b> 提供</span>
-                  {s.review_count > 0 ? <Stars value={s.avg_rating} reviews={s.review_count} /> : <span style={{ fontSize: 13, color: C.ink3 }}>尚無評價</span>}
-                </div>
-                <div style={{ marginTop: 18, padding: 16, background: C.ivory, borderRadius: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink3 }}>服務簡介</div>
-                  <div style={{ fontSize: 14, color: C.ink2, marginTop: 8, lineHeight: 1.7 }}>{summarize(s.description || "到方案頁查看交付內容、天數與固定價格。", 96)}</div>
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: "auto", paddingTop: 20 }}>
-                  <div>
-                    <div style={{ fontSize: 13, color: C.ink3 }}>{s.talent_location || "可遠端合作"}</div>
-                    <div style={{ fontSize: 26, fontWeight: 800, color: C.forest, lineHeight: 1.3 }}>
-                      {s.basic_price != null ? <>{fmt(s.basic_price)}<span style={{ fontSize: 13, fontWeight: 500, color: C.ink3 }}> 起</span></> : <span style={{ fontSize: 18 }}>查看方案</span>}
+          <>
+            <div style={grid(330, 22)}>
+              {shown.map((s: PublicService) => {
+                const monthly = s.price_period === "monthly";
+                return (
+                  <div key={s.id} className="fl-card" style={{ ...card, padding: 26, display: "flex", flexDirection: "column" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: C.forest2, background: C.sageMist, borderRadius: 999, padding: "4px 12px" }}>{s.category}</span>
+                        <span className="fl-type-pill">{SERVICE_TYPE_LABEL[serviceTypeOf(s.service_type)]}</span>
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: C.ink3 }}>{s.availability ? "可接案" : "暫停接案"}</span>
+                    </div>
+                    <h3 style={{ margin: "16px 0 6px", fontSize: 19, lineHeight: 1.45, color: C.ink }}>{s.title}</h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 14, color: C.ink2 }}>
+                      <span>由 <b style={{ color: C.ink, fontWeight: 600 }}>{s.talent_name}</b> 提供</span>
+                      {s.review_count > 0 ? <Stars value={s.avg_rating} reviews={s.review_count} /> : <span style={{ fontSize: 13, color: C.ink3 }}>{servicesState === "demo" ? "示範服務" : "尚無評價"}</span>}
+                    </div>
+                    <div style={{ marginTop: 18, padding: 16, background: C.ivory, borderRadius: 14 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.ink3 }}>服務簡介</div>
+                      <div style={{ fontSize: 14, color: C.ink2, marginTop: 8, lineHeight: 1.7 }}>{summarize(s.description || "到方案頁查看交付內容、天數與固定價格。", 96)}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: "auto", paddingTop: 20 }}>
+                      <div>
+                        <div style={{ fontSize: 13, color: C.ink3 }}>{s.talent_location || "可遠端合作"}</div>
+                        <div style={{ fontSize: 26, fontWeight: 800, color: C.forest, lineHeight: 1.3 }}>
+                          {s.basic_price != null ? <>{fmt(s.basic_price)}<span style={{ fontSize: 13, fontWeight: 500, color: C.ink3 }}>{monthly ? " /月" : " 起"}</span></> : <span style={{ fontSize: 18 }}>查看方案</span>}
+                        </div>
+                      </div>
+                      <Link to={servicesState === "demo" ? "/services" : `/services/${s.slug}`} className="fl-btn fl-primary" style={{ ...btn("primary"), textDecoration: "none" }}>{servicesState === "demo" ? "查看服務市集" : "查看方案"}</Link>
                     </div>
                   </div>
-                  <Link to={`/services/${s.slug}`} className="fl-btn fl-primary" style={{ ...btn("primary"), textDecoration: "none" }}>查看方案</Link>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          </>
         ) : (
           <div style={{ ...card, padding: 32, textAlign: "center", color: C.ink2 }}>
             這個分類目前沒有上架中的服務。

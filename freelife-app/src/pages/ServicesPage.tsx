@@ -5,14 +5,24 @@ import { Seo, breadcrumbJsonLd, graph, organizationJsonLd, professionalServiceJs
 import { SiteFooter, SiteHeader, useAuth } from "../lib/auth";
 import { useBootstrap } from "../lib/bootstrap";
 import { BRAND_WORDMARK, SERVICES_DESCRIPTION } from "../lib/site";
-import { C, CATEGORIES, btn, fmt } from "../lib/theme";
-import { listPublicServices, publicMediaUrl, rpcMessage, type PublicService } from "../lib/supabase";
+import { C, CATEGORIES, btn } from "../lib/theme";
+import { listPublicServices, publicMediaUrl, rpcMessage, type PublicService, type ServiceType } from "../lib/supabase";
 import { assignServiceCovers, type ServiceCover } from "../lib/service-covers";
+import { DEMO_SERVICES } from "../lib/demo-services";
+import { SERVICE_TYPE_LABEL, formatStartingPrice, serviceTypeOf } from "../lib/service-display";
 import { featuredTalentPhoto } from "../lib/talent-photos";
 import { Icon, Photo, Pill, SecHead, initialsOf } from "../components/ui";
 
 type Budget = "all" | "under" | "mid" | "over";
 type SortKey = "recommended" | "asc" | "desc";
+type TypeFilter = "all" | ServiceType;
+
+const TYPE_FILTERS: { id: TypeFilter; label: string }[] = [
+  { id: "all", label: "全部類型" },
+  { id: "consult", label: "90 分鐘諮詢" },
+  { id: "package", label: "專案包" },
+  { id: "retainer", label: "月費顧問" },
+];
 
 function serviceImageSrc(raw: string | undefined): string {
   if (!raw) return "";
@@ -66,12 +76,14 @@ function ServiceCard({
   cover,
   saved,
   pending,
+  demo,
   onToggle,
 }: {
   service: PublicService;
   cover: ServiceCover;
   saved: boolean;
   pending: boolean;
+  demo?: boolean;
   onToggle: (serviceId: string) => void;
 }) {
   const href = `/services/${service.slug}`;
@@ -81,27 +93,35 @@ function ServiceCard({
     event.preventDefault();
     event.stopPropagation();
   };
+  const coverImage = <Cover src={cover.src} alt={service.title} initials={initialsOf(service.talent_name)} position={cover.position} />;
 
   return (
     <article className="fl-card fl-svc-card">
       <div className="fl-svc-cover">
-        <Link to={href} className="fl-svc-cover-link" aria-label={service.title}>
-          <Cover src={cover.src} alt={service.title} initials={initialsOf(service.talent_name)} position={cover.position} />
-        </Link>
+        {demo ? (
+          <div className="fl-svc-cover-link">{coverImage}</div>
+        ) : (
+          <Link to={href} className="fl-svc-cover-link" aria-label={service.title}>
+            {coverImage}
+          </Link>
+        )}
+        <span className="fl-type-pill fl-svc-type">{SERVICE_TYPE_LABEL[serviceTypeOf(service.service_type)]}</span>
         <span className="fl-svc-cat">{service.category}</span>
-        <button
-          type="button"
-          className="fl-svc-heart"
-          aria-pressed={saved}
-          aria-label={saved ? `取消收藏${service.title}` : `收藏${service.title}`}
-          disabled={pending}
-          onClick={(event) => {
-            stop(event);
-            onToggle(service.id);
-          }}
-        >
-          <HeartIcon filled={saved} />
-        </button>
+        {demo ? null : (
+          <button
+            type="button"
+            className="fl-svc-heart"
+            aria-pressed={saved}
+            aria-label={saved ? `取消收藏${service.title}` : `收藏${service.title}`}
+            disabled={pending}
+            onClick={(event) => {
+              stop(event);
+              onToggle(service.id);
+            }}
+          >
+            <HeartIcon filled={saved} />
+          </button>
+        )}
       </div>
       <div className="fl-svc-body">
         <div className="fl-svc-seller">
@@ -120,18 +140,18 @@ function ServiceCard({
           </div>
         </div>
         <h2 className="fl-svc-title">
-          <Link to={href}>{service.title}</Link>
+          {demo ? service.title : <Link to={href}>{service.title}</Link>}
         </h2>
         <div className="fl-svc-rate">
           {service.review_count > 0 ? (
             <span><b>★</b>{Number(service.avg_rating || 0).toFixed(1)} ({service.review_count})</span>
           ) : (
-            <span className="fl-svc-new">新上架</span>
+            <span className="fl-svc-new">{demo ? "示範" : "新上架"}</span>
           )}
         </div>
         <div className="fl-svc-foot">
           <span className="fl-svc-foot-label">透明方案</span>
-          <span className="fl-svc-price">{price != null ? `${fmt(price)} 起` : "查看方案"}</span>
+          <span className="fl-svc-price">{formatStartingPrice(price, service.price_period)}</span>
         </div>
       </div>
     </article>
@@ -142,12 +162,23 @@ export default function ServicesPage() {
   const boot = useBootstrap();
   const { sb, profile, openAuth, setNotice } = useAuth();
   const [params, setParams] = useSearchParams();
-  const [q, setQ] = useState("");
-  const [category, setCategory] = useState("");
-  const [appliedQ, setAppliedQ] = useState("");
+  const initialQuery = (params.get("q") || "").trim();
+  const initialCategoryRaw = params.get("category") || "";
+  const initialCategory = initialCategoryRaw === "全部" ? "" : initialCategoryRaw;
+  const filteredStart = Boolean(initialQuery || initialCategory);
+  const [q, setQ] = useState(initialQuery);
+  const [category, setCategory] = useState(initialCategory);
+  const [appliedQ, setAppliedQ] = useState(initialQuery);
   const [budget, setBudget] = useState<Budget>("all");
   const [sort, setSort] = useState<SortKey>("recommended");
-  const [rows, setRows] = useState<PublicService[] | null>(boot.services ?? null);
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const bootList = boot.services;
+  const bootHasLive = Boolean(bootList && bootList.length);
+  const cachedCatalog = useRef<PublicService[] | null>(bootHasLive && bootList ? bootList : null);
+  const [rows, setRows] = useState<PublicService[] | null>(
+    filteredStart ? null : bootHasLive && bootList ? bootList : bootList ? DEMO_SERVICES : null,
+  );
+  const [usingDemo, setUsingDemo] = useState(!filteredStart && Boolean(bootList && bootList.length === 0));
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const [favIds, setFavIds] = useState<Set<string>>(() => new Set());
@@ -172,12 +203,34 @@ export default function ServicesPage() {
     (async () => {
       try {
         const data = await listPublicServices(appliedQ, category);
-        if (!cancelled) {
+        if (cancelled) return;
+        const unfiltered = !appliedQ && !category;
+        if (unfiltered && data.length === 0) {
+          cachedCatalog.current = [];
+          setRows(DEMO_SERVICES);
+          setUsingDemo(true);
+        } else {
+          if (unfiltered) cachedCatalog.current = data;
           setRows(data);
-          setError("");
+          setUsingDemo(false);
         }
+        setError("");
       } catch (err: unknown) {
-        if (!cancelled) setError((err as Error).message || "無法載入服務");
+        if (cancelled) return;
+        const unfiltered = !appliedQ && !category;
+        const cached = cachedCatalog.current;
+        if (unfiltered && cached && cached.length > 0) {
+          setRows(cached);
+          setUsingDemo(false);
+          setError("");
+        } else if (unfiltered) {
+          setRows(DEMO_SERVICES);
+          setUsingDemo(true);
+          setError("");
+        } else {
+          setUsingDemo(false);
+          setError((err as Error).message || "無法載入服務");
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -218,6 +271,7 @@ export default function ServicesPage() {
     setAppliedQ("");
     setBudget("all");
     setSort("recommended");
+    setTypeFilter("all");
     setParams(new URLSearchParams(), { replace: true });
   };
 
@@ -253,7 +307,7 @@ export default function ServicesPage() {
 
   const tabs = useMemo(() => ["全部", ...CATEGORIES], []);
   const shown = useMemo(() => {
-    const list = (rows ?? []).filter((service) => service.slug && matchesBudget(service, budget));
+    const list = (rows ?? []).filter((service) => service.slug && matchesBudget(service, budget) && (typeFilter === "all" || service.service_type === typeFilter));
     if (sort === "asc") {
       return [...list].sort((a, b) => (priceOf(a) ?? Number.POSITIVE_INFINITY) - (priceOf(b) ?? Number.POSITIVE_INFINITY));
     }
@@ -261,12 +315,12 @@ export default function ServicesPage() {
       return [...list].sort((a, b) => (priceOf(b) ?? Number.NEGATIVE_INFINITY) - (priceOf(a) ?? Number.NEGATIVE_INFINITY));
     }
     return list;
-  }, [rows, budget, sort]);
+  }, [rows, budget, sort, typeFilter]);
   const covers = useMemo(
     () => assignServiceCovers(shown.map((service) => ({ ...service, images: (service.images || []).map((src) => serviceImageSrc(src)) }))),
     [shown],
   );
-  const filtersActive = Boolean(appliedQ || category || budget !== "all" || sort !== "recommended");
+  const filtersActive = Boolean(appliedQ || category || budget !== "all" || sort !== "recommended" || typeFilter !== "all");
 
   return (
     <>
@@ -282,13 +336,13 @@ export default function ServicesPage() {
             { name: "首頁", path: "/" },
             { name: "探索服務", path: "/services" },
           ]),
-          rows && rows.length ? serviceItemListJsonLd(rows) : null,
+          !usingDemo && rows && rows.length ? serviceItemListJsonLd(rows) : null,
         )}
       />
       <SiteHeader />
       <main className="fl-market">
         <Breadcrumbs items={[{ name: "首頁", to: "/" }, { name: "探索服務" }]} />
-        <SecHead className="fl-market-head" as="h1" eyebrow="服務市集" title="探索標準化服務" sub="以透明定價的服務包開始合作。可依類別與關鍵字篩選，點進頁面即可比較 Basic／Standard／Premium 方案。" />
+        <SecHead className="fl-market-head" as="h1" eyebrow="服務市集" title="探索標準化服務" sub="以透明定價開始合作。可依類別與服務類型篩選；專案包可比較三個方案，月費顧問則以每月價格標示。" />
         <form role="search" className="fl-search fl-market-search" onSubmit={(e: FormEvent) => { e.preventDefault(); apply(q, category); }} style={{ marginBottom: 22, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, boxShadow: "0 18px 40px rgba(46,106,76,.08)" }}>
           <div style={{ flex: "1 1 180px", display: "flex", alignItems: "center", gap: 10, padding: "0 12px", minWidth: 0 }}>
             <Icon name="search" color={C.ink3} />
@@ -300,6 +354,11 @@ export default function ServicesPage() {
         <div className="fl-market-cats">
           {tabs.map((c) => (
             <Pill key={c} active={(c === "全部" && !category) || c === category} onClick={() => apply(appliedQ, c === "全部" ? "" : c)}>{c}</Pill>
+          ))}
+        </div>
+        <div className="fl-market-types" aria-label="服務類型">
+          {TYPE_FILTERS.map((item) => (
+            <Pill key={item.id} active={typeFilter === item.id} onClick={() => setTypeFilter(item.id)}>{item.label}</Pill>
           ))}
         </div>
 
@@ -327,6 +386,7 @@ export default function ServicesPage() {
           ) : null}
         </div>
 
+        {usingDemo ? <p className="fl-svc-demo-note">目前顯示示範服務</p> : null}
         {rows === null && error ? (
           <div className="fl-svc-status" style={{ color: "#B4533C" }}>{error}</div>
         ) : rows === null ? (
@@ -334,7 +394,7 @@ export default function ServicesPage() {
         ) : shown.length === 0 ? (
           <div className="fl-svc-empty">
             <h2>目前沒有符合的服務</h2>
-            <p>換個關鍵字、類別或預算再試試看，或直接看全部上架服務。</p>
+            <p>換個關鍵字、類別、類型或預算再試試看，或直接看全部上架服務。</p>
             <button type="button" onClick={clearAll}>查看全部服務</button>
           </div>
         ) : (
@@ -346,6 +406,7 @@ export default function ServicesPage() {
                 cover={covers.get(service.id) || { src: "", position: "center center" }}
                 saved={favIds.has(service.id)}
                 pending={pendingFav === service.id}
+                demo={usingDemo}
                 onToggle={(id) => { void toggleFav(id); }}
               />
             ))}

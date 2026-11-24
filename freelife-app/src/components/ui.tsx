@@ -244,10 +244,10 @@ export function Pill({ active, onClick, children }: { active: boolean; onClick: 
 }
 
 export function Field({
-  label, value, onChange, type = "text", placeholder, required, textarea, min, error,
+  label, value, onChange, type = "text", placeholder, required, textarea, min, error, suffix,
 }: {
   label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string;
-  required?: boolean; textarea?: boolean; min?: number | string; error?: string;
+  required?: boolean; textarea?: boolean; min?: number | string; error?: string; suffix?: string;
 }) {
   const style: CSSProperties = {
     width: "100%", border: `1px solid ${error ? "#B4533C" : C.line}`, borderRadius: 12,
@@ -259,7 +259,10 @@ export function Field({
       {textarea ? (
         <textarea className="fl-input" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} rows={5} style={{ ...style, resize: "vertical", minHeight: 120 }} />
       ) : (
-        <input className="fl-input" type={type} value={value} placeholder={placeholder} min={min} onChange={(e) => onChange(e.target.value)} style={style} />
+        <span style={{ position: "relative", display: "block" }}>
+          <input className="fl-input" type={type} value={value} placeholder={placeholder} min={min} onChange={(e) => onChange(e.target.value)} style={{ ...style, paddingRight: suffix ? 52 : 14 }} />
+          {suffix ? <span aria-hidden="true" style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: C.ink3, fontSize: 14, pointerEvents: "none" }}>{suffix}</span> : null}
+        </span>
       )}
       {error ? <div style={{ color: "#B4533C", fontSize: 13, marginTop: 4 }}>{error}</div> : null}
     </label>

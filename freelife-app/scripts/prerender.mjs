@@ -56,9 +56,8 @@ for (const service of services) {
   }
 }
 
-const serviceSlugs = Object.fromEntries(services.map((service) => [service.title, service.slug]));
 const jobs = [
-  { path: "/", bootstrap: { serviceSlugs }, priority: "1.0", changefreq: "weekly" },
+  { path: "/", bootstrap: { services }, priority: "1.0", changefreq: "weekly" },
   { path: "/services", bootstrap: { services }, priority: "0.9", changefreq: "daily" },
   { path: "/faq", bootstrap: {}, priority: "0.5", changefreq: "monthly" },
   ...pages.map((page) => ({

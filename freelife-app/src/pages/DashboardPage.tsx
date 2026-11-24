@@ -107,8 +107,9 @@ export default function DashboardPage() {
         <div style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600, marginBottom: 8 }}>工作台</div>
           <h1 style={{ fontSize: 32, fontWeight: 800, color: C.ink }}>你好，{profile.name}</h1>
-          <p style={{ color: C.ink2, marginTop: 8 }}>{isTalent ? "管理服務方案、訂單交付與訊息。" : "追蹤合作進度、收藏與邀請。"}</p>
+          <p style={{ color: C.ink2, marginTop: 8 }}>{isTalent ? "先完成人才檔案，公開後就會出現在首頁人才區。也可以在這裡管理服務、訂單與訊息。" : "追蹤合作進度、收藏與邀請。"}</p>
         </div>
+        {isTalent ? <TalentProfileCard profile={profile} /> : null}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 28 }}>
           {tabs.map((t) => (
             <Pill key={t.id} active={tab === t.id} onClick={() => setTab(t.id)}>{t.label}</Pill>
@@ -124,6 +125,245 @@ export default function DashboardPage() {
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+const SKILL_SPLIT = /[,，、\n]/;
+
+function splitSkills(raw: string): string[] {
+  return raw.split(SKILL_SPLIT).map((item) => item.replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+
+function normalizeSkills(items: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of items) {
+    const skill = item.replace(/\s+/g, " ").trim();
+    if (!skill) continue;
+    const key = skill.toLocaleLowerCase("zh-Hant");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(skill);
+  }
+  return out;
+}
+
+function skillsFromJson(value: unknown): string[] {
+  if (Array.isArray(value)) return normalizeSkills(value.map((item) => String(item)));
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed)) return normalizeSkills(parsed.map((item) => String(item)));
+    } catch {
+      /* plain text */
+    }
+    return normalizeSkills(splitSkills(trimmed));
+  }
+  return [];
+}
+
+function TalentProfileCard({ profile }: { profile: FlProfile }) {
+  const { sb } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [headline, setHeadline] = useState("");
+  const [bio, setBio] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillDraft, setSkillDraft] = useState("");
+  const [publish, setPublish] = useState(false);
+  const [savedPublic, setSavedPublic] = useState(false);
+  const [hasRow, setHasRow] = useState(false);
+  const [busy, setBusy] = useState<"public" | "draft" | null>(null);
+  const [feedback, setFeedback] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!sb) {
+      setLoading(false);
+      setLoadError("尚未連上資料庫，暫時無法編輯檔案。");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await sb
+        .from("talent_profiles")
+        .select("headline, bio, skills, onboarded")
+        .eq("user_id", profile.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.warn("[FREELI] talent profile load failed", error);
+        setLoadError("人才檔案暫時讀取不到，請重新整理後再試。");
+        setLoading(false);
+        return;
+      }
+      if (data) {
+        const row = data as { headline?: string; bio?: string; skills?: unknown; onboarded?: boolean };
+        setHeadline(row.headline || "");
+        setBio(row.bio || "");
+        setSkills(skillsFromJson(row.skills));
+        setPublish(!!row.onboarded);
+        setSavedPublic(!!row.onboarded);
+        setHasRow(true);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [sb, profile.id]);
+
+  const commitDraft = () => {
+    const next = normalizeSkills([...skills, ...splitSkills(skillDraft)]);
+    if (next.length !== skills.length || skillDraft.trim()) setSkills(next);
+    setSkillDraft("");
+    return next;
+  };
+
+  const save = async (nextPublic: boolean) => {
+    if (!sb) {
+      setFeedback({ tone: "err", text: "尚未連上資料庫，暫時無法儲存。" });
+      return;
+    }
+    const nextHeadline = headline.trim();
+    const nextBio = bio.trim();
+    const nextSkills = normalizeSkills([...skills, ...splitSkills(skillDraft)]);
+    if (nextPublic && nextHeadline.length < 2) {
+      setFeedback({ tone: "err", text: "公開前請先寫下一句話頭銜，讓企業知道你擅長什麼。" });
+      return;
+    }
+    if (nextHeadline.length > 80) {
+      setFeedback({ tone: "err", text: "一句話頭銜請控制在 80 字以內。" });
+      return;
+    }
+    if (nextBio.length > 800) {
+      setFeedback({ tone: "err", text: "簡介請控制在 800 字以內。" });
+      return;
+    }
+    if (nextSkills.some((skill) => skill.length > 40)) {
+      setFeedback({ tone: "err", text: "每個專長請在 40 字以內，方便企業快速瀏覽。" });
+      return;
+    }
+    setBusy(nextPublic ? "public" : "draft");
+    setFeedback(null);
+    const patch = {
+      headline: nextHeadline,
+      bio: nextBio,
+      skills: nextSkills,
+      onboarded: nextPublic,
+    };
+    try {
+      const { error } = await sb.from("talent_profiles").upsert(
+        { user_id: profile.id, ...patch },
+        { onConflict: "user_id", defaultToNull: false },
+      );
+      if (error) throw error;
+      setHeadline(nextHeadline);
+      setBio(nextBio);
+      setSkills(nextSkills);
+      setSkillDraft("");
+      setPublish(nextPublic);
+      setSavedPublic(nextPublic);
+      setHasRow(true);
+      setFeedback({
+        tone: "ok",
+        text: nextPublic
+          ? "已儲存並公開。你的頭銜、專長與所在地會出現在首頁人才區。"
+          : "已儲存為草稿。目前不會出現在首頁，只有你自己看得到。",
+      });
+    } catch (err) {
+      console.warn("[FREELI] talent profile save failed", err);
+      const raw = rpcMessage(err);
+      const denied = /row-level security|42501|permission|not_authenticated/i.test(raw);
+      setFeedback({
+        tone: "err",
+        text: denied ? "沒有權限儲存這份檔案。請確認你是以人才帳號登入。" : "儲存失敗，請再試一次。",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const statusText = savedPublic
+    ? "已公開，會出現在首頁人才區"
+    : hasRow
+      ? "尚未公開，只有你自己看得到"
+      : "尚未建立檔案。可以先存草稿，或直接公開";
+
+  return (
+    <section aria-labelledby="talent-profile-title" style={{ ...card, padding: 28, marginBottom: 28, border: `1px solid ${C.sage}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <div>
+          <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600, marginBottom: 8 }}>人才檔案</div>
+          <h2 id="talent-profile-title" style={{ margin: 0, fontSize: 24, color: C.ink }}>讓企業一眼認識你</h2>
+          <p style={{ margin: "8px 0 0", color: C.ink2, maxWidth: 640 }}>填寫一句話頭銜、簡介與專長。公開後，訪客可以在首頁人才區看到你。</p>
+        </div>
+        <span style={{ background: savedPublic ? C.sageMist : C.ivory2, color: savedPublic ? C.forest : C.ink2, borderRadius: 999, padding: "6px 12px", fontWeight: 700, fontSize: 13 }}>
+          {savedPublic ? "已公開" : "尚未公開"}
+        </span>
+      </div>
+      <p style={{ margin: "16px 0 0", fontSize: 14, color: C.ink2 }}>目前狀態：{statusText}</p>
+      {loading ? <p style={{ color: C.ink3 }}>正在讀取你的人才檔案…</p> : null}
+      {loadError ? <p style={{ color: "#B4533C" }}>{loadError}</p> : null}
+      {!loading && !loadError ? (
+        <div style={{ marginTop: 18 }}>
+          <Field label="一句話頭銜" value={headline} placeholder="例如：B2B 行銷策略顧問" onChange={setHeadline} />
+          <Field label="簡介" value={bio} textarea placeholder="用幾句話介紹你的經歷，以及企業可以怎麼跟你合作。" onChange={setBio} />
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.ink2, marginBottom: 6 }}>專長</div>
+            {skills.length ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                {skills.map((skill) => (
+                  <span key={skill} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.sageMist, color: C.forest, borderRadius: 999, padding: "4px 8px 4px 12px", fontSize: 13, fontWeight: 600 }}>
+                    {skill}
+                    <button type="button" aria-label={`移除${skill}`} onClick={() => setSkills(skills.filter((item) => item !== skill))} style={{ border: "none", background: "transparent", color: C.forest, cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <input
+              className="fl-input"
+              value={skillDraft}
+              placeholder="例如：B2B 行銷、內容策略。輸入後按 Enter"
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/[,，、]$/.test(value)) {
+                  setSkills(normalizeSkills([...skills, ...splitSkills(value)]));
+                  setSkillDraft("");
+                  return;
+                }
+                setSkillDraft(value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  commitDraft();
+                }
+              }}
+              onBlur={() => { if (skillDraft.trim()) commitDraft(); }}
+              style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 14px", fontSize: 15, color: C.ink, background: C.white, fontFamily: "inherit" }}
+            />
+            <div style={{ fontSize: 13, color: C.ink3, marginTop: 6 }}>用逗號、頓號或 Enter 分隔。重複的專長會自動合併。</div>
+          </div>
+          <label style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "8px 0 18px", color: C.ink }}>
+            <input type="checkbox" checked={publish} onChange={(e) => setPublish(e.target.checked)} style={{ marginTop: 4 }} />
+            <span>
+              <span style={{ fontWeight: 700 }}>公開出現在首頁人才區</span>
+              <span style={{ display: "block", fontSize: 13, color: C.ink3, fontWeight: 400 }}>勾選代表你希望公開。兩個按鈕都會儲存頭銜、簡介與專長，差別只在要不要出現在首頁。</span>
+            </span>
+          </label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <button type="button" className={publish ? "fl-btn fl-primary" : "fl-btn fl-ghost"} disabled={busy !== null} style={publish ? btn("primary") : btn("ghost")} onClick={() => void save(true)}>{busy === "public" ? "儲存中…" : "儲存並公開"}</button>
+            <button type="button" className={!publish ? "fl-btn fl-primary" : "fl-btn fl-ghost"} disabled={busy !== null} style={!publish ? btn("primary") : btn("ghost")} onClick={() => void save(false)}>{busy === "draft" ? "儲存中…" : "儲存草稿"}</button>
+            {savedPublic ? <Link to="/#talent" style={{ color: C.forest2, fontWeight: 700 }}>查看首頁人才區</Link> : null}
+          </div>
+          {feedback ? (
+            <div role="status" style={{ marginTop: 14, color: feedback.tone === "ok" ? C.forest : "#B4533C", background: feedback.tone === "ok" ? C.sageMist : "#F8EBE6", borderRadius: 12, padding: "10px 14px" }}>
+              {feedback.text}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

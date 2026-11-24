@@ -15,7 +15,7 @@ const HERO_VIDEO = "/media/hero-green-web.mp4";
 const HERO_POSTER = "/media/hero-green-poster.jpg";
 
 const HERO_CSS = `
-.fl-hero { position: relative; isolation: isolate; overflow: hidden; background: #FAF6EE; }
+.fl-hero { position: relative; isolation: isolate; overflow: hidden; background: #FDFCFA; }
 .fl-hero-media {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: center;
@@ -23,7 +23,7 @@ const HERO_CSS = `
 }
 .fl-hero-scrim {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: linear-gradient(90deg, rgba(250,246,238,0.92) 0%, rgba(250,246,238,0.10) 100%);
+  background: linear-gradient(90deg, rgba(253,252,250,0.92) 0%, rgba(253,252,250,0.10) 100%);
 }
 .fl-hero-grid { position: relative; z-index: 2; }
 .fl-hero-stage { display: flex; flex-direction: column; }
@@ -79,7 +79,7 @@ const HERO_CSS = `
 }
 @media (max-width: 943px) {
   .fl-hero-scrim {
-    background: linear-gradient(90deg, rgba(250,246,238,0.94) 0%, rgba(250,246,238,0.78) 42%, rgba(250,246,238,0.34) 100%);
+    background: linear-gradient(90deg, rgba(253,252,250,0.94) 0%, rgba(253,252,250,0.78) 42%, rgba(253,252,250,0.34) 100%);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -426,7 +426,7 @@ export default function HomePage() {
       />
 
       {/* 1. 導覽列 */}
-      <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(250,246,238,.96)" }}>
+      <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(253,252,250,.96)" }}>
         <nav aria-label="主要" style={{ ...wrap, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, minHeight: 76, flexWrap: "wrap" }}>
           <Link to="/" aria-label="Freeli 首頁" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <Leaf />
@@ -541,7 +541,7 @@ export default function HomePage() {
             { k: "talent", tag: "我是專業人才", title: "把你的專業，變成可以被預約的服務", pts: ["AI 協助包裝履歷與服務包", "自訂價格與每週接案時數", "在任何城市都能穩定接案"], cta: "成為 FREELI 人才", img: "asset:cta-talent.jpg", alt: "一位自由工作者在咖啡館用筆電工作", sage: true },
             { k: "biz", tag: "我是企業雇主", title: "不必養一個部門，也能擁有資深專業", pts: ["10 年以上資歷人才嚴選認證", "固定報價、交付物清楚列明", "驗收後付款，未交付全額退款"], cta: "開始尋找人才", img: "asset:cta-biz.jpg", alt: "企業主與顧問在會議中討論合作", sage: false },
           ].map((c: { k: string; tag: string; title: string; pts: string[]; cta: string; img: string; alt: string; sage: boolean }) => (
-            <div key={c.k} className="fl-card" style={{ ...card, background: c.sage ? "linear-gradient(165deg, #F8F6EF 0%, #E6ECDD 100%)" : C.ivory2, border: `1px solid ${c.sage ? "#D5E0CC" : C.line}`, display: "flex", flexWrap: "wrap" }}>
+            <div key={c.k} className="fl-card" style={{ ...card, background: c.sage ? "linear-gradient(165deg, #FDFCFA 0%, #EEF3E6 100%)" : C.ivory2, border: `1px solid ${c.sage ? "#D4E0CC" : C.line}`, boxShadow: "0 10px 28px rgba(90, 70, 40, .04)", display: "flex", flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 260px", padding: 36, minWidth: 0, display: "flex", flexDirection: "column" }}>
                 <span style={{ alignSelf: "flex-start", background: C.white, color: C.forest, borderRadius: 999, padding: "5px 14px", fontSize: 14, fontWeight: 700 }}>{c.tag}</span>
                 <h3 style={{ margin: "18px 0 16px", fontSize: 24, lineHeight: 1.4, color: C.ink }}>{c.title}</h3>
@@ -716,7 +716,7 @@ export default function HomePage() {
       </div>
 
       {/* 7. 為什麼選擇我們 */}
-      <div style={{ background: "linear-gradient(180deg, #F8F6EF 0%, #E6ECDD 58%, #F3EDE1 100%)", color: C.ink }}>
+      <div style={{ background: "linear-gradient(180deg, #FDFCFA 0%, #EEF3E6 55%, #F6F3EC 100%)", color: C.ink }}>
         <div className="fl-sec" style={{ ...wrap, paddingTop: 88, paddingBottom: 88 }}>
           <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600, marginBottom: 12 }}>為什麼選擇 FREELI</div>
           <h2 className="fl-h2" style={{ margin: "0 0 44px", color: C.ink, fontWeight: 700, maxWidth: 640 }}>讓每一次合作，都安心、透明又有彈性</h2>

@@ -336,7 +336,7 @@ export function SiteHeader({ extraNav }: { extraNav?: { label: string; on: () =>
   const linkFor = (label: string) => label === "探索服務" ? "/services" : label === "尋找人才" ? "/#talent" : label === "成為人才" ? "/#join" : label === "工作台" ? "/dashboard" : null;
 
   return (
-    <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(250,246,238,.96)", position: "sticky", top: 0, zIndex: 40 }}>
+    <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(253,252,250,.96)", position: "sticky", top: 0, zIndex: 40 }}>
       <nav aria-label="主要" style={{ ...wrap, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, minHeight: 76, flexWrap: "wrap" }}>
         <Link to="/" aria-label="Freeli 首頁" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <Leaf />

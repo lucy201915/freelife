@@ -5,6 +5,7 @@ import { useBootstrap } from "../lib/bootstrap";
 import { BRAND_WORDMARK, DEFAULT_DESCRIPTION, HERO_ALT, catalogPath, summarize } from "../lib/site";
 import { C, fmt, grid, wrap, type IconName } from "../lib/theme";
 import { listPublicTalents, listPublicServices, type PublicService, type PublicTalent } from "../lib/supabase";
+import { FEATURED_TALENT_PHOTOS } from "../lib/talent-photos";
 import { trackEvent } from "../lib/analytics";
 import { useAuth } from "../lib/auth";
 import { Icon, Leaf, Photo, Stars, initialsOf, SecHead, Pill } from "../components/ui";
@@ -101,12 +102,6 @@ function usePrefersReducedMotion(): boolean {
 }
 
 const FEATURED_TALENT_ORDER = ["吳沛慈", "林可恩", "陳子謙", "張書維"];
-const FEATURED_TALENT_PHOTOS: Record<string, string> = {
-  吳沛慈: "asset:t1.jpg",
-  林可恩: "asset:t2.jpg",
-  陳子謙: "asset:t3.jpg",
-  張書維: "asset:t4.jpg",
-};
 
 type LiveTalentRow = {
   name: string;

@@ -7,6 +7,7 @@ import { useBootstrap } from "../lib/bootstrap";
 import { BRAND_WORDMARK, SERVICES_DESCRIPTION } from "../lib/site";
 import { C, CATEGORIES, btn, fmt } from "../lib/theme";
 import { listPublicServices, publicMediaUrl, rpcMessage, type PublicService } from "../lib/supabase";
+import { assignServiceCovers, type ServiceCover } from "../lib/service-covers";
 import { featuredTalentPhoto } from "../lib/talent-photos";
 import { Icon, Photo, Pill, SecHead, initialsOf } from "../components/ui";
 
@@ -47,7 +48,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function Cover({ src, alt, initials }: { src: string; alt: string; initials: string }) {
+function Cover({ src, alt, initials, position }: { src: string; alt: string; initials: string; position: string }) {
   const [failed, setFailed] = useState(false);
   const photo = src.trim();
   if (!photo || failed) {
@@ -57,16 +58,18 @@ function Cover({ src, alt, initials }: { src: string; alt: string; initials: str
       </div>
     );
   }
-  return <img src={photo} alt={alt} onError={() => setFailed(true)} />;
+  return <img src={photo} alt={alt} style={{ objectPosition: position }} loading="eager" decoding="async" onError={() => setFailed(true)} />;
 }
 
 function ServiceCard({
   service,
+  cover,
   saved,
   pending,
   onToggle,
 }: {
   service: PublicService;
+  cover: ServiceCover;
   saved: boolean;
   pending: boolean;
   onToggle: (serviceId: string) => void;
@@ -83,7 +86,7 @@ function ServiceCard({
     <article className="fl-card fl-svc-card">
       <div className="fl-svc-cover">
         <Link to={href} className="fl-svc-cover-link" aria-label={service.title}>
-          <Cover src={serviceImageSrc(service.images?.[0])} alt={service.title} initials={initialsOf(service.talent_name)} />
+          <Cover src={cover.src} alt={service.title} initials={initialsOf(service.talent_name)} position={cover.position} />
         </Link>
         <span className="fl-svc-cat">{service.category}</span>
         <button
@@ -259,6 +262,10 @@ export default function ServicesPage() {
     }
     return list;
   }, [rows, budget, sort]);
+  const covers = useMemo(
+    () => assignServiceCovers(shown.map((service) => ({ ...service, images: (service.images || []).map((src) => serviceImageSrc(src)) }))),
+    [shown],
+  );
   const filtersActive = Boolean(appliedQ || category || budget !== "all" || sort !== "recommended");
 
   return (
@@ -281,8 +288,8 @@ export default function ServicesPage() {
       <SiteHeader />
       <main className="fl-market">
         <Breadcrumbs items={[{ name: "首頁", to: "/" }, { name: "探索服務" }]} />
-        <SecHead as="h1" eyebrow="服務市集" title="探索標準化服務" sub="以透明定價的服務包開始合作。可依類別與關鍵字篩選，點進頁面即可比較 Basic／Standard／Premium 方案。" />
-        <form role="search" className="fl-search" onSubmit={(e: FormEvent) => { e.preventDefault(); apply(q, category); }} style={{ marginBottom: 22, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, boxShadow: "0 18px 40px rgba(31,61,43,.08)" }}>
+        <SecHead className="fl-market-head" as="h1" eyebrow="服務市集" title="探索標準化服務" sub="以透明定價的服務包開始合作。可依類別與關鍵字篩選，點進頁面即可比較 Basic／Standard／Premium 方案。" />
+        <form role="search" className="fl-search fl-market-search" onSubmit={(e: FormEvent) => { e.preventDefault(); apply(q, category); }} style={{ marginBottom: 22, background: C.white, border: `1px solid ${C.line}`, borderRadius: 999, padding: 8, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, boxShadow: "0 18px 40px rgba(46,106,76,.08)" }}>
           <div style={{ flex: "1 1 180px", display: "flex", alignItems: "center", gap: 10, padding: "0 12px", minWidth: 0 }}>
             <Icon name="search" color={C.ink3} />
             <label className="fl-sr" htmlFor="service-search">搜尋服務</label>
@@ -290,7 +297,7 @@ export default function ServicesPage() {
           </div>
           <button type="submit" className="fl-btn fl-primary" style={{ ...btn("primary"), padding: "13px 28px" }}>搜尋</button>
         </form>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+        <div className="fl-market-cats">
           {tabs.map((c) => (
             <Pill key={c} active={(c === "全部" && !category) || c === category} onClick={() => apply(appliedQ, c === "全部" ? "" : c)}>{c}</Pill>
           ))}
@@ -299,7 +306,7 @@ export default function ServicesPage() {
         <div className="fl-market-tools">
           <div className="fl-market-count">{rows === null && !error ? "載入服務中…" : `共 ${shown.length} 項服務`}</div>
           <label className="fl-market-field">
-            預算篩選
+            <span className="fl-market-field-label">預算篩選</span>
             <select aria-label="預算篩選" value={budget} onChange={(e) => setBudget(e.target.value as Budget)}>
               <option value="all">全部預算</option>
               <option value="under">NT$20,000 以下</option>
@@ -308,7 +315,7 @@ export default function ServicesPage() {
             </select>
           </label>
           <label className="fl-market-field">
-            排序
+            <span className="fl-market-field-label">排序</span>
             <select aria-label="排序" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
               <option value="recommended">推薦排序</option>
               <option value="asc">價格由低到高</option>
@@ -336,6 +343,7 @@ export default function ServicesPage() {
               <ServiceCard
                 key={service.id}
                 service={service}
+                cover={covers.get(service.id) || { src: "", position: "center center" }}
                 saved={favIds.has(service.id)}
                 pending={pendingFav === service.id}
                 onToggle={(id) => { void toggleFav(id); }}

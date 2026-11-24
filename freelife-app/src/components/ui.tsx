@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref } from "react";
 import { C, type IconName } from "../lib/theme";
 
 export function Image({
@@ -12,6 +12,8 @@ export function Image({
   decoding = "async",
   fetchPriority,
   onError,
+  onLoad,
+  imgRef,
   ...rest
 }: {
   src: string;
@@ -24,6 +26,8 @@ export function Image({
   decoding?: "async" | "auto" | "sync";
   fetchPriority?: "high" | "low" | "auto";
   onError?: () => void;
+  onLoad?: () => void;
+  imgRef?: Ref<HTMLImageElement>;
   [key: string]: unknown;
 }) {
   const resolved =
@@ -31,12 +35,14 @@ export function Image({
   return (
     <img
       {...rest}
+      ref={imgRef}
       src={resolved}
       alt={alt}
       loading={loading}
       decoding={decoding}
       {...(fetchPriority ? { fetchPriority } : {})}
       onError={onError}
+      onLoad={onLoad}
       width={typeof width === "number" ? width : undefined}
       height={typeof height === "number" ? height : undefined}
       style={{
@@ -132,12 +138,55 @@ function AvatarFallback({ alt, height, initials }: { alt: string; height: number
 
 export function Photo({ src, alt, height, radius = 20, initials, priority = false }: { src: string; alt: string; height: number; radius?: number; initials?: string; priority?: boolean }) {
   const photo = src.trim();
+  const imgRef = useRef<HTMLImageElement>(null);
   const [failedSrc, setFailedSrc] = useState("");
+  const [loadedSrc, setLoadedSrc] = useState("");
   const broken = Boolean(photo) && failedSrc === photo;
+  const loaded = Boolean(photo) && loadedSrc === photo;
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img || !photo || broken) return;
+    if (img.complete && img.naturalWidth > 0) {
+      setLoadedSrc(photo);
+      return;
+    }
+    const promote = () => {
+      img.loading = "eager";
+      if (!img.complete) {
+        const next = img.getAttribute("src");
+        if (next) img.src = next;
+      }
+    };
+    if (priority) {
+      promote();
+      return;
+    }
+    if (typeof IntersectionObserver === "undefined") {
+      promote();
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        promote();
+        observer.disconnect();
+      }
+    }, { rootMargin: "700px 0px" });
+    observer.observe(img);
+    return () => observer.disconnect();
+  }, [photo, broken, priority]);
+
+  const showStandIn = !photo || broken || (Boolean(initials) && !loaded);
   return (
     <div style={{ borderRadius: radius, overflow: "hidden", background: C.sageMist, lineHeight: 0, position: "relative" }}>
+      {showStandIn ? (
+        <div style={photo && !broken ? { position: "absolute", inset: 0 } : undefined}>
+          <AvatarFallback alt={alt} height={height} initials={initials} />
+        </div>
+      ) : null}
       {photo && !broken ? (
         <Image
+          imgRef={imgRef}
           src={photo}
           alt={alt}
           fit="cover"
@@ -145,11 +194,10 @@ export function Photo({ src, alt, height, radius = 20, initials, priority = fals
           loading={priority ? "eager" : "lazy"}
           decoding={priority ? "auto" : "async"}
           fetchPriority={priority ? "high" : undefined}
+          onLoad={() => setLoadedSrc(photo)}
           onError={() => setFailedSrc(photo)}
         />
-      ) : (
-        <AvatarFallback alt={alt} height={height} initials={initials} />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -173,10 +221,10 @@ export function Eyebrow({ children }: { children: ReactNode }) {
   return <div style={{ fontSize: 13, letterSpacing: ".16em", color: C.forest2, fontWeight: 600, marginBottom: 12 }}>{children}</div>;
 }
 
-export function SecHead({ eyebrow, title, sub, right, as = "h2" }: { eyebrow: string; title: string; sub?: string; right?: ReactNode; as?: "h1" | "h2" }) {
+export function SecHead({ eyebrow, title, sub, right, as = "h2", className }: { eyebrow: string; title: string; sub?: string; right?: ReactNode; as?: "h1" | "h2"; className?: string }) {
   const Heading = as;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 40 }}>
+    <div className={className} style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 40 }}>
       <div style={{ flex: "1 1 320px", minWidth: 0 }}>
         <Eyebrow>{eyebrow}</Eyebrow>
         <Heading className="fl-h2" style={{ margin: 0, color: C.ink, fontWeight: 700 }}>{title}</Heading>

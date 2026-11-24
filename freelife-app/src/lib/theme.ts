@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 
 export const C = {
-  forest: "#1F3D2B",
-  forest2: "#2C4F3A",
+  forest: "#2E6A4C",
+  forest2: "#255E44",
   sage: "#9CAF88",
   sageLight: "#C9D5BC",
   sageMist: "#E6ECDD",
@@ -37,7 +37,7 @@ export const CSS = `
 .fl-btn { cursor: pointer; transition: background .2s ease, color .2s ease, transform .15s ease, box-shadow .2s ease; }
 .fl-btn:active { transform: scale(.98); }
 .fl-btn:disabled { cursor: not-allowed; }
-.fl-primary:hover { background: ${C.forest2} !important; box-shadow: 0 8px 20px rgba(31,61,43,.22); }
+.fl-primary:hover { background: ${C.forest2} !important; box-shadow: 0 8px 20px rgba(46,106,76,.24); }
 .fl-ghost:hover { background: ${C.sageMist} !important; }
 .fl-light:hover { background: ${C.ivory2} !important; }
 .fl-link { cursor: pointer; transition: color .2s ease; }

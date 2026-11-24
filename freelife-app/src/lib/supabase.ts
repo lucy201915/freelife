@@ -262,6 +262,12 @@ export function rpcMessage(err: unknown): string {
     service_packages_delivery_max_check: "交期最多 365 天",
     service_packages_revisions_max_check: "修改次數最多 20 次",
     service_packages_features_len_check: "方案內容最多 12 條",
+    service_description_required: "上架前請寫至少 20 字的服務說明",
+    service_needs_cover: "上架前請上傳至少一張封面圖片",
+    service_package_incomplete: "上架前請填好每個方案的價格、交期與至少一項內容",
+    services_subcategory_len_check: "子類別最多 40 字",
+    services_search_tags_check: "搜尋標籤最多 5 個",
+    service_packages_summary_len_check: "方案簡短說明最多 120 字",
   };
   const text = msg || "操作失敗，請再試一次";
   for (const [k, v] of Object.entries(map)) {

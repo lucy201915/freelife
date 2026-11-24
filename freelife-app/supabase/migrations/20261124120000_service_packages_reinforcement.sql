@@ -52,6 +52,30 @@ alter table public.service_packages
   add constraint service_packages_features_len_check
     check (jsonb_array_length(features) <= 12);
 
+-- A draft may store a price before the talent picks a delivery time.
+-- 0 means "not chosen yet". Publishing still requires 1–365 days (see the guard below).
+-- No rows are updated or deleted; existing packages already have delivery_days >= 1.
+alter table public.service_packages drop constraint if exists service_packages_days_check;
+alter table public.service_packages
+  add constraint service_packages_days_check check (delivery_days >= 0);
+
+-- Optional overview / pricing text. Empty is valid, so a one-minute draft still saves.
+-- No RLS policy or GRANT is changed; existing row policies cover the new columns.
+alter table public.services
+  add column if not exists subcategory text not null default '',
+  add column if not exists search_tags jsonb not null default '[]'::jsonb;
+
+alter table public.services
+  add constraint services_subcategory_len_check check (char_length(subcategory) <= 40),
+  add constraint services_search_tags_check
+    check (jsonb_typeof(search_tags) = 'array' and jsonb_array_length(search_tags) <= 5);
+
+alter table public.service_packages
+  add column if not exists summary text not null default '';
+
+alter table public.service_packages
+  add constraint service_packages_summary_len_check check (char_length(summary) <= 120);
+
 drop trigger if exists service_packages_set_updated_at on public.service_packages;
 create trigger service_packages_set_updated_at
   before update on public.service_packages
@@ -95,6 +119,20 @@ begin
       if n_monthly > 0 then
         raise exception 'one_time_service_has_monthly_package' using errcode = '23514';
       end if;
+    end if;
+
+    if char_length(coalesce(new.description, '')) < 20 then
+      raise exception 'service_description_required' using errcode = '23514';
+    end if;
+    if jsonb_array_length(coalesce(new.images, '[]'::jsonb)) < 1 then
+      raise exception 'service_needs_cover' using errcode = '23514';
+    end if;
+    if exists (
+      select 1 from public.service_packages as sp
+       where sp.service_id = new.id
+         and (sp.price <= 0 or sp.delivery_days < 1 or jsonb_array_length(sp.features) < 1)
+    ) then
+      raise exception 'service_package_incomplete' using errcode = '23514';
     end if;
 
     if not exists (
